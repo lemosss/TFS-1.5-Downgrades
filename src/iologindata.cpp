@@ -32,7 +32,7 @@ Account IOLoginData::loadAccount(uint32_t accno)
 {
 	Account account;
 
-	DBResult_ptr result = Database::getInstance().storeQuery(fmt::format("SELECT `id`, `name`, `password`, `type`, `premium_ends_at` FROM `accounts` WHERE `id` = {:d}", accno));
+	DBResult_ptr result = Database::getInstance().storeQuery(fmt::format("SELECT `id`, `name`, `password`, `type`, `premium_ends_at`, `coins` FROM `accounts` WHERE `id` = {:d}", accno));
 	if (!result) {
 		return account;
 	}
@@ -41,6 +41,7 @@ Account IOLoginData::loadAccount(uint32_t accno)
 	account.name = result->getString("name");
 	account.accountType = static_cast<AccountType_t>(result->getNumber<int32_t>("type"));
 	account.premiumEndsAt = result->getNumber<time_t>("premium_ends_at");
+	account.coins = result->getNumber<uint32_t>("coins");
 	return account;
 }
 
@@ -77,7 +78,7 @@ bool IOLoginData::loginserverAuthentication(const std::string& name, const std::
 {
 	Database& db = Database::getInstance();
 
-	DBResult_ptr result = db.storeQuery(fmt::format("SELECT `id`, `name`, `password`, `secret`, `type`, `premium_ends_at` FROM `accounts` WHERE `name` = {:s}", db.escapeString(name)));
+	DBResult_ptr result = db.storeQuery(fmt::format("SELECT `id`, `name`, `password`, `secret`, `type`, `premium_ends_at`, `coins` FROM `accounts` WHERE `name` = {:s}", db.escapeString(name)));
 	if (!result) {
 		return false;
 	}
@@ -91,6 +92,7 @@ bool IOLoginData::loginserverAuthentication(const std::string& name, const std::
 	account.key = decodeSecret(result->getString("secret"));
 	account.accountType = static_cast<AccountType_t>(result->getNumber<int32_t>("type"));
 	account.premiumEndsAt = result->getNumber<time_t>("premium_ends_at");
+	account.coins = result->getNumber<uint32_t>("coins");
 
 	result = db.storeQuery(fmt::format("SELECT `name` FROM `players` WHERE `account_id` = {:d} AND `deletion` = 0 ORDER BY `name` ASC", account.id));
 	if (result) {
@@ -173,6 +175,20 @@ void IOLoginData::setAccountType(uint32_t accountId, AccountType_t accountType)
 	Database::getInstance().executeQuery(fmt::format("UPDATE `accounts` SET `type` = {:d} WHERE `id` = {:d}", static_cast<uint16_t>(accountType), accountId));
 }
 
+uint32_t IOLoginData::getAccountCoins(uint32_t accountId)
+{
+	DBResult_ptr result = Database::getInstance().storeQuery(fmt::format("SELECT `coins` FROM `accounts` WHERE `id` = {:d}", accountId));
+	if (!result) {
+		return 0;
+	}
+	return result->getNumber<uint32_t>("coins");
+}
+
+void IOLoginData::setAccountCoins(uint32_t accountId, uint32_t coins)
+{
+	Database::getInstance().executeQuery(fmt::format("UPDATE `accounts` SET `coins` = {:d} WHERE `id` = {:d}", coins, accountId));
+}
+
 void IOLoginData::updateOnlineStatus(uint32_t guid, bool login)
 {
 	if (g_config.getBoolean(ConfigManager::ALLOW_CLONES)) {
@@ -238,6 +254,7 @@ bool IOLoginData::loadPlayer(Player* player, DBResult_ptr result)
 	player->accountType = acc.accountType;
 
 	player->premiumEndsAt = acc.premiumEndsAt;
+	player->coins = acc.coins;
 
 	Group* group = g_game.groups.getGroup(result->getNumber<uint16_t>("group_id"));
 	if (!group) {

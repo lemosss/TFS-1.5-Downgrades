@@ -2526,6 +2526,11 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("Player", "getPremiumEndsAt", LuaScriptInterface::luaPlayerGetPremiumEndsAt);
 	registerMethod("Player", "setPremiumEndsAt", LuaScriptInterface::luaPlayerSetPremiumEndsAt);
 
+	registerMethod("Player", "getCoins", LuaScriptInterface::luaPlayerGetCoins);
+	registerMethod("Player", "setCoins", LuaScriptInterface::luaPlayerSetCoins);
+	registerMethod("Player", "addCoins", LuaScriptInterface::luaPlayerAddCoins);
+	registerMethod("Player", "removeCoins", LuaScriptInterface::luaPlayerRemoveCoins);
+
 	registerMethod("Player", "hasBlessing", LuaScriptInterface::luaPlayerHasBlessing);
 	registerMethod("Player", "addBlessing", LuaScriptInterface::luaPlayerAddBlessing);
 	registerMethod("Player", "removeBlessing", LuaScriptInterface::luaPlayerRemoveBlessing);
@@ -9884,6 +9889,56 @@ int LuaScriptInterface::luaPlayerSetPremiumEndsAt(lua_State* L)
 	player->setPremiumTime(timestamp);
 	IOLoginData::updatePremiumTime(player->getAccount(), timestamp);
 	pushBoolean(L, true);
+	return 1;
+}
+
+int LuaScriptInterface::luaPlayerGetCoins(lua_State* L)
+{
+	// player:getCoins()
+	Player* player = getUserdata<Player>(L, 1);
+	if (player) {
+		lua_pushinteger(L, player->getCoins());
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaPlayerSetCoins(lua_State* L)
+{
+	// player:setCoins(value)
+	Player* player = getUserdata<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+	player->setCoins(getNumber<uint32_t>(L, 2));
+	pushBoolean(L, true);
+	return 1;
+}
+
+int LuaScriptInterface::luaPlayerAddCoins(lua_State* L)
+{
+	// player:addCoins(amount)
+	Player* player = getUserdata<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+	player->addCoins(getNumber<uint32_t>(L, 2));
+	pushBoolean(L, true);
+	return 1;
+}
+
+int LuaScriptInterface::luaPlayerRemoveCoins(lua_State* L)
+{
+	// player:removeCoins(amount) -> true on success, false if balance was too low
+	Player* player = getUserdata<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+	pushBoolean(L, player->removeCoins(getNumber<uint32_t>(L, 2)));
 	return 1;
 }
 

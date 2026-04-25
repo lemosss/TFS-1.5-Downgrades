@@ -4077,6 +4077,36 @@ void Player::setPremiumTime(time_t premiumEndsAt)
 	//sendBasicData();
 }
 
+void Player::setCoins(uint32_t value)
+{
+	coins = value;
+	IOLoginData::setAccountCoins(accountNumber, coins);
+	if (client) {
+		client->sendCoinBalance();
+	}
+}
+
+void Player::addCoins(uint32_t amount)
+{
+	if (amount == 0) {
+		return;
+	}
+	uint64_t total = static_cast<uint64_t>(coins) + amount;
+	if (total > std::numeric_limits<uint32_t>::max()) {
+		total = std::numeric_limits<uint32_t>::max();
+	}
+	setCoins(static_cast<uint32_t>(total));
+}
+
+bool Player::removeCoins(uint32_t amount)
+{
+	if (coins < amount) {
+		return false;
+	}
+	setCoins(coins - amount);
+	return true;
+}
+
 PartyShields_t Player::getPartyShield(const Player* player) const
 {
 	if (!player) {
