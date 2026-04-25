@@ -41,4 +41,8 @@
 
 #include <boost/asio.hpp>
 
+namespace boost::asio {
+	using io_service = io_context;
+}
+
 #include <pugixml.hpp>
