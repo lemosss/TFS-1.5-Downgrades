@@ -1,0 +1,22 @@
+{
+  "name": "tfs-7-72",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "boost-asio",
+    "boost-iostreams",
+    "boost-system",
+    "boost-filesystem",
+    "boost-variant",
+    "boost-lockfree",
+    "boost-date-time",
+    "lua",
+    "libmariadb",
+    "pugixml",
+    "cryptopp",
+    "fmt"
+  ],
+  "overrides": [
+    { "name": "fmt", "version": "8.1.1" }
+  ],
+  "builtin-baseline": "e778080f0d8019247d332ef3a3df1202578ca202"
+}
