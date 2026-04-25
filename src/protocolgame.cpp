@@ -1633,12 +1633,23 @@ void ProtocolGame::sendShop(Npc* npc, const ShopInfoList& itemList)
 {
 	NetworkMessage msg;
 	msg.addByte(0x7A);
-	msg.addString(npc->getName());
 
-	uint16_t itemsToSend = std::min<size_t>(itemList.size(), std::numeric_limits<uint16_t>::max());
-	msg.add<uint16_t>(itemsToSend);
+	// The NPC-name field on the open-shop packet was only introduced at
+	// client 9.10 (OTCv8 / edubart-otclient gate it behind the
+	// GameNameOnNpcTrade feature, see modules/game_features/features.lua).
+	// On a 7.72 client the feature is disabled and the bytes we'd write
+	// here are interpreted as the list count and the first item, which
+	// desyncs the parser and trips InputMessage eof reached.
+	(void)npc;
 
-	uint16_t i = 0;
+	// 7.72 wire format expects a uint8 list count (uint16 was introduced
+	// at client 9.00). Sending uint16 here causes OTCv8/edubart-otclient
+	// to mis-parse and bail with InputMessage eof reached on the second
+	// byte, leaving the trade window unopened.
+	uint8_t itemsToSend = std::min<size_t>(itemList.size(), std::numeric_limits<uint8_t>::max());
+	msg.addByte(itemsToSend);
+
+	uint8_t i = 0;
 	for (auto it = itemList.begin(); i < itemsToSend; ++it, ++i) {
 		AddShopItem(msg, *it);
 	}
@@ -1657,7 +1668,11 @@ void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 {
 	NetworkMessage msg;
 	msg.addByte(0x7B);
-	msg.add<uint64_t>(player->getMoney() + player->getBankBalance());
+	// 7.72 wire format expects a uint32 money field (uint64 was introduced
+	// at client 9.73). Cap at uint32 max so we don't desync the client when
+	// a player has more than 4 billion gold across inventory + bank.
+	uint64_t totalMoney = player->getMoney() + player->getBankBalance();
+	msg.add<uint32_t>(std::min<uint64_t>(totalMoney, std::numeric_limits<uint32_t>::max()));
 
 	std::map<uint16_t, uint32_t> saleMap;
 

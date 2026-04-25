@@ -41,7 +41,9 @@
 		<defense name="healing" chance="17" min="600" max="1000">
 			<attribute key="areaEffect" value="blueshimmer"/>
 		</defense>
-		<defense name="haste_orshabaal" chance="5"/>
+		<defense name="speed" interval="2000" chance="5" speedchange="320" duration="5000">
+			<attribute key="areaEffect" value="redshimmer"/>
+		</defense>
 	</defenses>
 	<summons maxSummons="4">
 		<summon name="demon" chance="10" max="4"/>
