@@ -519,7 +519,6 @@ if Modules == nil then
 			else
 				msg = msg .. ", "
 			end
-			i = i + 1
 		end
 
 		module.npcHandler:say(msg, cid)
