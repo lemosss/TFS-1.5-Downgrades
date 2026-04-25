@@ -26,7 +26,7 @@ endif ()
 # Find packages.
 find_package(CryptoPP QUIET)
 if (CryptoPP_FOUND)  # vcpkg-provided cmake package called CryptoPP
-    set(Crypto++_LIBRARIES "cryptopp-static")
+    set(Crypto++_LIBRARIES "cryptopp::cryptopp")
 else()
     find_package(Crypto++ REQUIRED)
 endif ()
@@ -36,7 +36,7 @@ find_package(fmt 6.1.2 REQUIRED)
 # If we link to the file directly, we might miss its dependencies from vcpkg
 find_package(unofficial-libmariadb CONFIG QUIET)
 if (unofficial-libmariadb_FOUND)
-    set(MYSQL_CLIENT_LIBS "libmariadb")
+    set(MYSQL_CLIENT_LIBS "unofficial::libmariadb")
 else ()
     find_package(MySQL REQUIRED)
 endif ()
