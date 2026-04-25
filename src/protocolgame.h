@@ -133,6 +133,8 @@ class ProtocolGame final : public Protocol
 		void parsePlayerPurchase(NetworkMessage& msg);
 		void parsePlayerSale(NetworkMessage& msg);
 
+		void parseTransferCoins(NetworkMessage& msg);
+
 		void parseQuestLine(NetworkMessage& msg);
 
 		void parseInviteToParty(NetworkMessage& msg);
@@ -219,6 +221,7 @@ class ProtocolGame final : public Protocol
 
 		void sendShop(Npc* npc, const ShopInfoList& itemList);
 		void sendCloseShop();
+		void sendCoinBalance();
 		void sendSaleItemList(const std::list<ShopInfo>& shop);
 		void sendMarketEnter(uint32_t depotId);
 		void sendMarketLeave();

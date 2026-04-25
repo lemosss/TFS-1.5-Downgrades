@@ -3058,6 +3058,61 @@ void Game::playerCloseShop(uint32_t playerId)
 	player->closeShopWindow();
 }
 
+void Game::playerTransferCoins(uint32_t playerId, const std::string& recipient, uint16_t amount)
+{
+	Player* player = getPlayerByID(playerId);
+	if (!player) {
+		return;
+	}
+
+	if (amount == 0) {
+		player->sendTextMessage(MESSAGE_INFO_DESCR, "Invalid amount.");
+		return;
+	}
+
+	if (player->getCoins() < amount) {
+		player->sendTextMessage(MESSAGE_INFO_DESCR, "You don't have enough coins.");
+		return;
+	}
+
+	uint32_t targetGuid = IOLoginData::getGuidByName(recipient);
+	if (targetGuid == 0) {
+		player->sendTextMessage(MESSAGE_INFO_DESCR, "A player with this name does not exist.");
+		return;
+	}
+
+	uint32_t targetAccountId = IOLoginData::getAccountIdByPlayerId(targetGuid);
+	if (targetAccountId == 0 || targetAccountId == player->getAccount()) {
+		player->sendTextMessage(MESSAGE_INFO_DESCR, "You cannot transfer coins to yourself.");
+		return;
+	}
+
+	if (!player->removeCoins(amount)) {
+		// Race lost between the check above and now (e.g. another transfer
+		// from a parallel session). Fail safely without crediting anyone.
+		player->sendTextMessage(MESSAGE_INFO_DESCR, "You don't have enough coins.");
+		return;
+	}
+
+	// Credit the recipient. If they're online, mutate the cached value via
+	// setCoins so their client refreshes immediately. Otherwise persist
+	// straight to the DB.
+	Player* targetPlayer = getPlayerByGUID(targetGuid);
+	if (targetPlayer) {
+		targetPlayer->addCoins(amount);
+	} else {
+		uint32_t current = IOLoginData::getAccountCoins(targetAccountId);
+		uint64_t total = static_cast<uint64_t>(current) + amount;
+		if (total > std::numeric_limits<uint32_t>::max()) {
+			total = std::numeric_limits<uint32_t>::max();
+		}
+		IOLoginData::setAccountCoins(targetAccountId, static_cast<uint32_t>(total));
+	}
+
+	player->sendTextMessage(MESSAGE_INFO_DESCR,
+		fmt::format("You have transferred {:d} coin(s) to {:s}.", amount, recipient));
+}
+
 void Game::playerLookInShop(uint32_t playerId, uint16_t spriteId, uint8_t count)
 {
 	Player* player = getPlayerByID(playerId);

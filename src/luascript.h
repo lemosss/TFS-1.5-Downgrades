@@ -996,6 +996,11 @@ class LuaScriptInterface
 		static int luaPlayerGetPremiumEndsAt(lua_State* L);
 		static int luaPlayerSetPremiumEndsAt(lua_State* L);
 
+		static int luaPlayerGetCoins(lua_State* L);
+		static int luaPlayerSetCoins(lua_State* L);
+		static int luaPlayerAddCoins(lua_State* L);
+		static int luaPlayerRemoveCoins(lua_State* L);
+
 		static int luaPlayerHasBlessing(lua_State* L);
 		static int luaPlayerAddBlessing(lua_State* L);
 		static int luaPlayerRemoveBlessing(lua_State* L);

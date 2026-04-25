@@ -584,6 +584,7 @@ void ProtocolGame::parsePacket(NetworkMessage& msg)
 		case 0xE6: parseBugReport(msg); break;
 		case 0xE7: /* thank you */ break;
 		case 0xE8: parseDebugAssert(msg); break;
+		case 0xEF: parseTransferCoins(msg); break;
 		case 0xF0: addGameTaskTimed(DISPATCHER_TASK_EXPIRATION, &Game::playerShowQuestLog, player->getID()); break;
 		case 0xF1: parseQuestLine(msg); break;
 		case 0xF2: parseRuleViolationReport(msg); break;
@@ -1664,6 +1665,32 @@ void ProtocolGame::sendCloseShop()
 	writeToOutputBuffer(msg);
 }
 
+void ProtocolGame::sendCoinBalance()
+{
+	if (!player) {
+		return;
+	}
+
+	// 0xDF = GameServerCoinBalance (Tibia 10.80+ opcode, but the OTCv8
+	// client accepts it on any protocol version once the wire format is
+	// honored). We always send the same number for "balance" and
+	// "transferable" since this engine has no auction-house lock concept.
+	NetworkMessage msg;
+	msg.addByte(0xDF);
+	msg.addByte(0x01); // 1 = update; 0 would tell the client to ignore the rest
+	msg.add<uint32_t>(player->getCoins());
+	msg.add<uint32_t>(player->getCoins());
+	writeToOutputBuffer(msg);
+}
+
+void ProtocolGame::parseTransferCoins(NetworkMessage& msg)
+{
+	// 0xEF = ClientTransferCoins (string recipient, uint16 amount).
+	std::string recipient = msg.getString();
+	uint16_t amount = msg.get<uint16_t>();
+	addGameTask(&Game::playerTransferCoins, player->getID(), recipient, amount);
+}
+
 void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 {
 	NetworkMessage msg;
@@ -2674,6 +2701,12 @@ void ProtocolGame::sendAddCreature(const Creature* creature, const Position& pos
 
 	//sendBasicData();
 	player->sendIcons();
+
+	if (isLogin) {
+		// Push the account's coin balance so the OTCv8 shop module can
+		// render "Points: N" and the coin transfer dialog.
+		sendCoinBalance();
+	}
 }
 
 void ProtocolGame::sendMoveCreature(const Creature* creature, const Position& newPos, int32_t newStackPos, const Position& oldPos, int32_t oldStackPos, bool teleport)

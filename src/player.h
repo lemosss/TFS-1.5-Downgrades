@@ -407,6 +407,14 @@ class Player final : public Creature, public Cylinder
 		bool isPremium() const;
 		void setPremiumTime(time_t premiumEndsAt);
 
+		// Account-level Tibia Coin balance. The cached `coins` field is
+		// loaded at player login from `accounts.coins` and is the source of
+		// truth while this player is online. Mutators persist immediately.
+		uint32_t getCoins() const { return coins; }
+		void setCoins(uint32_t value);
+		bool removeCoins(uint32_t amount);
+		void addCoins(uint32_t amount);
+
 		uint16_t getHelpers() const;
 
 		bool setVocation(uint16_t vocId);
@@ -1237,6 +1245,7 @@ class Player final : public Creature, public Cylinder
 		time_t lastLoginSaved = 0;
 		time_t lastLogout = 0;
 		time_t premiumEndsAt = 0;
+		uint32_t coins = 0;
 
 		uint64_t experience = 0;
 		uint64_t manaSpent = 0;
