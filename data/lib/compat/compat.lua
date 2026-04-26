@@ -1510,16 +1510,17 @@ end
 -- TFS uses different naming (e.g. 'idleKickTime' -> IDLE_TIME), so most return nil.
 do
 	local configKeyMap = {
-		sqlType = configKeys.MYSQL_DB and 'mysql' or 'mysql',
+		sqlType = 'mysql',
 		idleKickTime = configKeys.KICK_AFTER_MINUTES,
 		deathLostPercent = configKeys.DEATH_LOSE_PERCENT,
 		blessings = configKeys.BLESSINGS,
 		blessingsOnlyPremium = configKeys.BLESSING_ONLY_PREMIUM,
+		worldId = 1,  -- TFS is single-world; OTX scripts that filter by world_id assume id=1
 	}
 	function getConfigValue(key)
 		local mapped = configKeyMap[key]
 		if mapped == nil then return nil end
-		if type(mapped) == 'string' then return mapped end
+		if type(mapped) == 'string' or type(mapped) == 'number' then return mapped end
 		return configManager.getNumber(mapped) or configManager.getString(mapped)
 	end
 end
@@ -1578,4 +1579,68 @@ if getBooleanFromString == nil then
 		local s = str:lower():trim()
 		return s == 'yes' or s == 'true' or s == '1' or s == 'on'
 	end
+end
+
+-- OTX doPlayerSetRate(cid, skill, rate): per-player skill rate multiplier.
+-- TFS 1.5 doesn't have a Lua-bound skill-rate API, so we stash the value in a
+-- player storage slot. A future creaturescript onGainSkill hook (or C++ patch)
+-- can read this back to apply the multiplier; for now the shim just records.
+if doPlayerSetRate == nil then
+	PLAYER_RATE_STORAGE_BASE = 850000  -- skill 0..7 -> 850000..850007
+	function doPlayerSetRate(cid, skill, rate)
+		local p = Player(cid)
+		if not p then return false end
+		p:setStorageValue(PLAYER_RATE_STORAGE_BASE + skill, math.floor(rate * 100))
+		return true
+	end
+end
+
+-- OTX getPlayerRates(cid): inverse of doPlayerSetRate
+if getPlayerRates == nil then
+	function getPlayerRates(cid)
+		local p = Player(cid)
+		if not p then return {} end
+		local rates = {}
+		for skill = 0, 7 do
+			local stored = p:getStorageValue(PLAYER_RATE_STORAGE_BASE + skill)
+			rates[skill] = stored > 0 and (stored / 100) or 1
+		end
+		return rates
+	end
+end
+
+-- OTX db.getResult / db.executeQuery — map to TFS 1.5 db.storeQuery / db.query.
+-- Also wrap the Result so OTX-style getDataInt/getDataString/getID still work.
+if db.getResult == nil then
+	-- Result wrapper: when storeQuery returns a Result, expose the OTX methods.
+	local function wrapResult(r)
+		if not r then
+			-- OTX returns a "result" with getID() == -1 on no rows. Mimic that
+			-- with a stub that fails getID() check and is otherwise harmless.
+			return {
+				getID = function() return -1 end,
+				getDataInt = function() return 0 end,
+				getDataLong = function() return 0 end,
+				getDataString = function() return '' end,
+				next = function() return false end,
+				free = function() end,
+			}
+		end
+		-- Patch the metatable in-place: only add methods that don't already exist
+		local mt = getmetatable(r) or {}
+		local idx = mt.__index or {}
+		if type(idx) == 'table' then
+			idx.getDataInt = idx.getDataInt or function(self, col) return self:getNumber(col) end
+			idx.getDataLong = idx.getDataLong or function(self, col) return self:getNumber(col) end
+			idx.getDataString = idx.getDataString or function(self, col) return self:getString(col) end
+			idx.getID = idx.getID or function() return 1 end  -- truthy = "has rows"
+		end
+		return r
+	end
+	function db.getResult(query) return wrapResult(db.storeQuery(query)) end
+end
+
+if db.executeQuery == nil then
+	-- TFS 1.5 calls it db.query; OTX calls it db.executeQuery. Same signature.
+	function db.executeQuery(query) return db.query(query) end
 end
