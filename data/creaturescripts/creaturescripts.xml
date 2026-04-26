@@ -9,4 +9,33 @@
 	<event type="death" name="DropLoot" script="droploot.lua" />
 	<event type="extendedopcode" name="ExtendedOpcode" script="extendedopcode.lua" />
 	<event type="extendedopcode" name="ShopBuy" script="shopbuy.lua" />
+
+
+	<!-- ===== Auto-imported from OTX ===== -->
+	<event type="login" name="PlayerItems" script="items.lua"/>
+	<event type="login" name="PlayerOut" script="fimout.lua"/>
+	<event type="login" name="PlayerLight" script="light.lua"/>
+	<event type="login" name="SkillStagesLogin" script="skillstageslogin.lua"/>
+	<event type="login" name="MonsterBoost_login" script="monster_boost.lua"/>
+	<event type="kill" name="MonsterBoost_kill" script="monster_boost.lua"/>
+	<event type="login" name="YalaharWaves_login" script="yalahar_waves.lua"/>
+	<event type="death" name="YalaharWaves_death" script="yalahar_waves.lua"/>
+	<event type="death" name="BossAnniDeathh" script="boss_annihi.lua"/>
+	<event type="death" name="BossAnniDeath" script="boss_carlin.lua"/>
+	<event type="death" name="BossAnniDeathu" script="boss_port.lua"/>
+	<event type="death" name="BossAnniDeathe" script="boss_dwarfbridge.lua"/>
+	<event type="advance" name="AdvanceSave" script="advancesave.lua"/>
+	<event type="advance" name="SkillStagesAdvance" script="skillstagesadvance.lua"/>
+	<event type="think" name="Idle" script="idle.lua"/>
+	<event type="think" name="SkullCheck" script="skullcheck.lua"/>
+	<event type="login" name="FimVip" script="fimprem.lua"/>
+	<event type="login" name="Outfit" script="roupa.lua"/>
+	<!-- Event types moveitem/channeljoin/mailreceive/reportbug are not implemented in
+	     TFS 1.5 (they exist only in OTX). Kept registered as-is for the user; engine
+	     emits a configure-error and skips them. To activate these, the C++ source
+	     needs to expose those CreatureEventType values, which requires source patches. -->
+	<event type="moveitem" name="MoveItem" script="houseprotect.lua"/>
+	<event type="channeljoin" name="GuildEvents" script="guild.lua"/>
+	<event type="mailreceive" name="Mail" script="mail.lua"/>
+	<event type="reportbug" name="ReportBug" script="reportbug.lua"/>
 </creaturescripts>

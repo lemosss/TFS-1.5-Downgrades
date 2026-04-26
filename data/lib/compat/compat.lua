@@ -1492,3 +1492,90 @@ end
 
 -- this is a fix for lua52 or higher which has the function renamed to table.unpack, while luajit still uses unpack
 if unpack == nil then unpack = table.unpack end
+
+-- ===== OTX compat shims (used by scripts imported from OTX) =====
+
+-- Lua 5.2+ removed table.maxn. OTX scripts use it on dense arrays; # is equivalent.
+if table.maxn == nil then
+	table.maxn = function(t) return #t end
+end
+
+-- OTX getDataDir(): scripts dofile() relative paths from this. Always 'data/' for us.
+if getDataDir == nil then
+	function getDataDir() return 'data/' end
+end
+
+-- OTX getConfigValue(key): map to TFS configManager. Unknown keys return nil
+-- so callers using `if x then` still work. We try configKeys[upper(key)] first;
+-- TFS uses different naming (e.g. 'idleKickTime' -> IDLE_TIME), so most return nil.
+do
+	local configKeyMap = {
+		sqlType = configKeys.MYSQL_DB and 'mysql' or 'mysql',
+		idleKickTime = configKeys.KICK_AFTER_MINUTES,
+		deathLostPercent = configKeys.DEATH_LOSE_PERCENT,
+		blessings = configKeys.BLESSINGS,
+		blessingsOnlyPremium = configKeys.BLESSING_ONLY_PREMIUM,
+	}
+	function getConfigValue(key)
+		local mapped = configKeyMap[key]
+		if mapped == nil then return nil end
+		if type(mapped) == 'string' then return mapped end
+		return configManager.getNumber(mapped) or configManager.getString(mapped)
+	end
+end
+
+-- OTX getItemInfo(id): returns a table with item metadata. We adapt to ItemType.
+-- Conservative: only expose fields that are definitely supported in TFS 1.5
+-- ItemType. Add more on demand as scripts surface needs (key.lua only uses
+-- transformUseTo, name, article).
+if getItemInfo == nil then
+	function getItemInfo(id)
+		local it = ItemType(id)
+		if not it or it:getId() == 0 then return nil end
+		-- Some methods only exist in newer TFS or in OTX. Use a safe wrapper
+		-- that returns 0 if the method isn't bound, matching OTX behaviour
+		-- (OTX returns 0 for missing optional fields).
+		local function safeCall(obj, method, default)
+			local m = obj[method]
+			if not m then return default or 0 end
+			local ok, val = pcall(m, obj)
+			return ok and val or (default or 0)
+		end
+		return setmetatable({
+			id = id,
+			name = it:getName(),
+			article = it:getArticle(),
+			pluralName = it:getPluralName(),
+			description = it:getDescription(),
+			weight = safeCall(it, 'getWeight', 0),
+			transformEquipTo = safeCall(it, 'getTransformEquipId', 0),
+			transformDeEquipTo = safeCall(it, 'getTransformDeEquipId', 0),
+			-- transformUseTo / decayTo: not bound in TFS 1.5 ItemType Lua API; OTX
+			-- scripts that need these (e.g. doors/key.lua's CHILD_DOORS lookup)
+			-- gracefully fall back to 0, leaving CHILD_DOORS empty — DOORS still works.
+			transformUseTo = 0,
+			decayTo = 0,
+			stackable = it:isStackable(),
+			rotateable = false,  -- not bound in 1.5
+			moveable = it:isMovable(),
+			pickupable = it:isPickupable(),
+		}, {__index = function() return 0 end})  -- unknown fields return 0, like OTX
+	end
+end
+
+-- Silence the deprecated doSendAnimatedText spam: 7.72 client doesn't render animated
+-- text the same way. Keep the function present for OTX compat but make it a no-op.
+function doSendAnimatedText() return true end
+
+-- OTX SKILL__MAGLEVEL (double underscore) — TFS uses single underscore
+if SKILL__MAGLEVEL == nil then SKILL__MAGLEVEL = SKILL_MAGLEVEL end
+
+-- OTX getBooleanFromString: parse various truthy strings to boolean
+if getBooleanFromString == nil then
+	function getBooleanFromString(str)
+		if type(str) == 'boolean' then return str end
+		if type(str) ~= 'string' then return false end
+		local s = str:lower():trim()
+		return s == 'yes' or s == 'true' or s == '1' or s == 'on'
+	end
+end

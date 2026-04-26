@@ -10,3 +10,6 @@ function logCommand(player, words, param)
 	io.write(logFormat:format(os.date("%d/%m/%Y %H:%M"), words, param):trim() .. "\n")
 	io.close(file)
 end
+
+-- OTX talkactions lib (Etapa H)
+dofile('data/talkactions/lib/otx_talkactions.lua')

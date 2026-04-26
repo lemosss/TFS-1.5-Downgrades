@@ -1,3 +1,8 @@
+-- Load OTX globals (DOORS, SPOTS, ROPABLE, HOLES, SAND, JUNGLE_GRASS, etc.)
+-- BEFORE TFS's locals/functions so TFS-native ones win conflicts (only TFS's
+-- destroyItem/onUseMachete signature is compatible with TFS-native scripts).
+dofile('data/actions/lib/otx_actions.lua')
+
 local wildGrowth = {1499, 11099} -- wild growth destroyable by machete
 local jungleGrass = { -- grass destroyable by machete
 	[2782] = 2781,

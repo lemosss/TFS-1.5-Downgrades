@@ -51,4 +51,55 @@
 	<!-- test talkactions -->
 	<talkaction words="!z" separator=" " script="magiceffect.lua" />
 	<talkaction words="!x" separator=" " script="animationeffect.lua" />
+
+
+	<!-- ===== Auto-imported from OTX ===== -->
+	<talkaction  log="yes" words="/mount;!mount" script="talkaction_mounts.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/addskill;/upgrade" script="skill.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/attr;/edition" event="function" value="thingProporties"/>
+	<talkaction log="yes" group="4" access="3" words="/serverdiag" event="function" value="diagnostics"/>
+	<talkaction log="yes" group="4" access="3" words="/closeserver;/openserver" script="closeopen.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/promote;/demote" script="promote.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/shutdown" script="shutdown.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/mode" script="mode.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/m;/monster;/n;/npc" script="creature.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/i;/objetos;/items" script="createitem.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/s;/summon" script="summon.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/storage" script="storage.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/config" script="configinfo.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/mkick" script="masskick.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/mc" script="multicheck.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/save" script="save.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/bc" script="broadcastclass.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/raid" script="raid.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/newtype" script="newtype.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/send" script="teleportsend.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/wp" script="waypoints.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/r;/remove" script="remove.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/c" script="teleporthere.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/t" script="teleporttown.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/up;/down" script="teleportfloor.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/town" script="teleporttown.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/info" script="playerinfo.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/cliport;/squelch" script="gamemaster.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/ghost;/invisible" event="function" value="ghost"/>
+	<talkaction log="yes" group="4" access="3" words="/mute;/unmute" script="mute.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/light" script="gamemaster.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/notations" script="notations.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/goto;!goto" script="teleportto.lua"/>
+	<talkaction log="yes" group="4" access="3" words="/baninfo" event="function" value="banishmentInfo"/>
+	<talkaction log="yes" group="4" access="3" words="/a" script="teleporttiles.lua"/>
+	<talkaction words="!auto" script="automsg.lua"/>
+	<talkaction access="0-4" words="!frags;/frags" script="frags.lua"/>
+	<talkaction access="0-4" words="!sharing;/sharing;/expsharing;!expsharing" script="partyshareexp.lua"/>
+	<talkaction words="!offer" script="auctionsystem.lua"/>
+	<talkaction words="/mboost" script="monster_boost.lua"/>
+	<talkaction access="0-4" words="alana res;/buyhouse;!buyhouse" filter="word-spaced" event="function" value="houseBuy"/>
+	<talkaction access="0-4" words="alana grav;/sellhouse;!sellhouse" filter="word-spaced" event="function" value="houseSell"/>
+	<talkaction access="0-4" words="alana sio" filter="word-spaced" event="function" value="houseKick"/>
+	<talkaction access="0-4" words="aleta grav" filter="word-spaced" event="function" value="houseDoorList"/>
+	<talkaction access="0-4" words="aleta sio" filter="word-spaced" event="function" value="houseGuestList"/>
+	<talkaction access="0-4" words="aleta som" filter="word-spaced" event="function" value="houseSubOwnerList"/>
+	<talkaction access="0-4" words="/war" channel="0" script="war.lua"/>
+	<talkaction access="0-4" words="/balance" channel="0" script="balance.lua"/>
 </talkactions>

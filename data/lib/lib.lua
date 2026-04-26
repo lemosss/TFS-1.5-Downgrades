@@ -7,3 +7,7 @@ dofile('data/lib/compat/compat.lua')
 -- Debugging helper function for Lua developers
 dofile('data/lib/debugging/dump.lua')
 dofile('data/lib/debugging/lua_version.lua')
+
+-- OTX libs imported alongside the script port (Etapa H).
+-- Loaded last so OTX libs can rely on TFS compat shims defined above.
+dofile('data/lib/otx/init.lua')
