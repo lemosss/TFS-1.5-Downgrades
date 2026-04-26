@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<npc name="Kanadan" script="kanadan.lua" walkinterval="2500" floorchange="0">
+	<health now="150" max="150"/>
+	<look type="129" head="19" body="67" legs="103" feet="51" corpse="2212"/>
+    <parameters>
+        <parameter key="message_greet" value="Welcome on board, |PLAYERNAME|, I Travel you to Meadowfield."/>
+		<parameter key="message_farewell" value="Good bye. Recommend us if you were satisfied with our service."/>
+		</parameters>
+</npc>

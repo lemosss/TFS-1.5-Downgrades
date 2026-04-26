@@ -1,0 +1,9 @@
+<npc name="King Calvin II" script="calvin.lua" floorchange="0" walkinterval="2500" access="5" level="1" maglevel="1">
+	<health now="150" max="150"/>
+	<look type="130" head="29" body="77" legs="102" feet="95" corpse="2212"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+            <parameter key="message_greet" value="I greet thee, my loyal subject." />
+            <parameter key="message_walkaway" value="What a lack of manners!" />    
+	</parameters>
+</npc>

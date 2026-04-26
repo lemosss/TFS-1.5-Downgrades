@@ -22,7 +22,7 @@
 		<attack name="lifedrain" chance="30" radius="5" target="0" min="-200" max="-750">
 			<attribute key="areaEffect" value="purplenote"/>
 		</attack>
-		<attack name="paralyze_vashresamun" chance="13" range="7"/>
+		<attack name="speed" interval="2000" chance="13" range="7" speedchange="-300" duration="10000" target="1"><attribute key="areaEffect" value="redshimmer"/></attack>
 	</attacks>
 	<defenses armor="20" defense="225">
 		<defense name="healing" chance="20" min="60" max="450">

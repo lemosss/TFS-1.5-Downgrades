@@ -20,7 +20,7 @@
 	<attacks>
 		<attack name="melee" skill="65" attack="42"/>
 		<attack name="lifedrain" chance="20" range="1" min="-55" max="-105"/>
-		<attack name="paralyze_vampire" chance="12" range="7"/>
+		<attack name="speed" interval="2000" chance="12" range="7" speedchange="-300" duration="10000" target="1"><attribute key="areaEffect" value="redshimmer"/></attack>
 	</attacks>
 	<defenses armor="27" defense="123">
 		<defense name="outfit" chance="1" monster="bat" duration="6000">

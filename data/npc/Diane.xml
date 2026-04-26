@@ -1,0 +1,19 @@
+<npc name="Diane" script="diane.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="150" max="150"/>
+	<look type="138" head="22" body="99" legs="5" feet="76" addons="0"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+		<parameter key="message_greet" value="Be greeted, dear |PLAYERNAME|. Have a look at our offers." />
+                <parameter key="message_farewell" value="Farewell." />
+                <parameter key="message_walkaway" value="Farewell." />
+                <parameter key="message_placedinqueue" value="I am deeply sorry, dear |PLAYERNAME|, but I am busy with a customer. Please wait a moment." />        
+		<parameter key="shop_sellable" value="white pearl,2143,160;black pearl,2144,280;small diamond,2145,300;small sapphire,2146,250;small ruby,2147,250;small emerald,2149,250;small amethyst,2150,200" />   
+                <parameter key="message_onbuy" value="Here you are." /> 
+		<parameter key="message_needmoremoney" value="I am sorry, but you don't have enough money." />
+                <parameter key="message_decline_buy" value="Too bad, perhaps we can trade on the next occasion you visit us." />
+                <parameter key="message_onsell" value="Excellent. Here is your money." />   
+                <parameter key="message_nothaveitem" value="I am sorry, but you do not have one." />     
+                <parameter key="message_nothaveitems" value="Sorry, you do not have so many." />  
+                <parameter key="message_decline_sell" value="Too bad, perhaps we can trade on the next occasion you visit us." />                               
+	</parameters>
+</npc>

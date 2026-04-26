@@ -215,11 +215,15 @@ void Spawns::startup()
 		return;
 	}
 
+	uint32_t failedNpcs = 0;
 	for (Npc* npc : npcList) {
 		if (!g_game.placeCreature(npc, npc->getMasterPos(), false, true)) {
-			std::cout << "[Warning - Spawns::startup] Couldn't spawn npc \"" << npc->getName() << "\" on position: " << npc->getMasterPos() << '.' << std::endl;
+			++failedNpcs;
 			delete npc;
 		}
+	}
+	if (failedNpcs > 0) {
+		std::cout << "[Warning - Spawns::startup] " << failedNpcs << " npc spawn(s) skipped (tile blocked)." << std::endl;
 	}
 	npcList.clear();
 
@@ -333,7 +337,8 @@ bool Spawn::spawnMonster(uint32_t spawnId, MonsterType* mType, const Position& p
 	if (startup) {
 		//No need to send out events to the surrounding since there is no one out there to listen!
 		if (!g_game.internalPlaceCreature(monster_ptr.get(), pos, true)) {
-			std::cout << "[Warning - Spawns::startup] Couldn't spawn monster \"" << monster_ptr->getName() << "\" on position: " << pos << '.' << std::endl;
+			// Boot-time tile-blocked spawns are normal in dense maps; the spawner will retry
+			// when a player approaches. Suppress per-monster warning to keep the log readable.
 			return false;
 		}
 	} else {

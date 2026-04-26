@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<npc name="Boss Trade" script="bosstrade.lua" walkinterval="25" access="3" lookdir="2">
+<look type="128" head="114" body="101" legs="122" feet="115"/>
+	<mana now="800" max="800"/>
+	<health now="200" max="200"/>
+	
+<parameters>
+
+	<parameter key="message_greet" value="Hello |PLAYERNAME|, I trade boss coin for glory refiner and royal refiner!!" />
+	<parameter key="message_farewell" value="Good bye |PLAYERNAME|!" />
+    </parameters>
+</npc>

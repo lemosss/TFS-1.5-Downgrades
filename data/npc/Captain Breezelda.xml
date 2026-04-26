@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<npc name="Captain Breezelda" script="barco_svargrond.lua" walkinterval="2000" floorchange="0">
+<health now="100" max="100"/>
+<look type="437" head="97" body="23" legs="28" feet="76" addons="3" />
+<voices>
+<voice text="Passages to Carlin, Venore, Thais." interval2="100" margin="1" yell="no"/>
+</voices>
+<parameters>
+<parameter key="message_farewell" value="Good bye. Recommend us if you were satisfied with our service." />
+<parameter key="message_walkaway" value="Good bye. Recommend us if you were satisfied with our service." />
+ <parameter key="module_keywords" value="1" />
+ <parameter key="keywords" value="name;svargrond;" />
+ <parameter key="keyword_reply1" value="My name is Captain Breezelda from the Royal Tibia Line." />
+ <parameter key="keyword_reply2" value="This is Svargrond. Where do you want to go?" />
+ <parameter key="message_greet" value="Welcome on board, |PLAYERNAME|. Where may I sail you today?"/>
+</parameters>
+</npc>

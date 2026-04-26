@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<npc name="Buddel" script="Buddel.lua" walkinterval="2000" access="3" floorchange="0">
+    <health now="100" max="100"/>
+ 	<look type="357" head="19" body="57" legs="22" feet="20" addons="0" />
+    <parameters>
+        
+        <parameter key="message_greet" value="Daraman's blessings, traveller |PLAYERNAME|. Where do you want me to travel you?"/>
+		<parameter key="message_farewell" value="Daraman's blessings."/>
+        
+        <parameter key="module_keywords" value="1" />
+        <parameter key="keywords" value="name;job;" />
+        <parameter key="keyword_reply1" value="I'm known as Buddel Ibn Kalith." />
+        <parameter key="keyword_reply2" value="I'm a licensed Svargrond boat pilot. I can bring you to Okolnir, Helheim, Barbarian Camp and Tyrsung." />
+
+        <parameter key="module_shop" value="1"/>
+        <parameter key="shop_buyable" value="" />
+        <parameter key="shop_sellable" value="" />
+    </parameters>
+</npc>

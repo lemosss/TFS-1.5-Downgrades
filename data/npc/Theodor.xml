@@ -1,0 +1,11 @@
+<npc name="Theodor" script="adrenius.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="1000" max="1000"/>
+<look type="9" head="20" body="30" legs="40" feet="50" corpse="3128"/>
+<parameters>
+		<parameter key="module_shop" value="1" />
+                <parameter key="message_greet" value="Hello, |PLAYERNAME|! What can I do for you?"/>
+                <parameter key="message_farewell" value="Good bye." />
+                <parameter key="message_walkaway" value="Leave me, I am used to it anyways..." />
+                <parameter key="message_placedinqueue" value="Can't you see, I am talking to someone else!" />
+	</parameters>
+</npc>

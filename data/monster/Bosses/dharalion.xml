@@ -36,7 +36,7 @@
 		<defense name="healing" chance="20" min="90" max="120">
 			<attribute key="areaEffect" value="blueshimmer"/>
 		</defense>
-		<defense name="haste_dharalion" chance="7"/>
+		<defense name="speed" interval="2000" chance="7" speedchange="320" duration="5000"><attribute key="areaEffect" value="redshimmer"/></defense>
 	</defenses>
 	<summons maxSummons="2">
 		<summon name="demon skeleton" chance="6" max="2"/>

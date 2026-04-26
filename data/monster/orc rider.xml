@@ -21,7 +21,7 @@
 		<attack name="melee" skill="48" attack="41"/>
 	</attacks>
 	<defenses armor="9" defense="48">
-		<defense name="haste_orcrider" chance="7"/>
+		<defense name="speed" interval="2000" chance="7" speedchange="320" duration="5000"><attribute key="areaEffect" value="redshimmer"/></defense>
 	</defenses>
 	<elements>
 	</elements>

@@ -31,7 +31,7 @@
 		<defense name="invisible" chance="9" duration="2000">
 			<attribute key="areaEffect" value="blueshimmer"/>
 		</defense>
-		<defense name="haste_assassin" chance="9"/>
+		<defense name="speed" interval="2000" chance="9" speedchange="320" duration="5000"><attribute key="areaEffect" value="redshimmer"/></defense>
 	</defenses>
 	<elements>
 	</elements>

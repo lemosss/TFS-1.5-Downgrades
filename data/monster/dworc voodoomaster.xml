@@ -20,7 +20,7 @@
 	<attacks>
 		<attack name="melee" skill="22" attack="13"/>
 		<attack name="lifedrain" chance="6" range="1" min="-1" max="-39"/>
-		<attack name="paralyze_dworcvoodoomaster" chance="8" range="7"/>
+		<attack name="speed" interval="2000" chance="8" range="7" speedchange="-300" duration="10000" target="1"><attribute key="areaEffect" value="redshimmer"/></attack>
 		<attack name="drunk" chance="9" range="7" duration="6000">
 			<attribute key="shooteffect" value="energy"/>
 			<attribute key="areaeffect" value="teleport"/>
@@ -39,7 +39,7 @@
 		<defense name="healing" chance="10" min="3" max="9">
 			<attribute key="areaeffect" value="blueshimmer"/>
 		</defense>
-		<defense name="haste_dworcvoodoomaster" chance="8"/>
+		<defense name="speed" interval="2000" chance="8" speedchange="320" duration="5000"><attribute key="areaEffect" value="redshimmer"/></defense>
 		<defense name="invisible" chance="5" duration="3000">
 			<attribute key="areaeffect" value="blueshimmer"/>
 		</defense>

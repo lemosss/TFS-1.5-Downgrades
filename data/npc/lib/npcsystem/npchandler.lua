@@ -33,6 +33,10 @@ if NpcHandler == nil then
 	MESSAGE_ALREADYFOCUSED = 21 -- When the player already has the focus of this npc.
 	MESSAGE_WALKAWAY_MALE = 22 -- When a male player walks out of the talkRadius of the npc.
 	MESSAGE_WALKAWAY_FEMALE = 23 -- When a female player walks out of the talkRadius of the npc.
+	-- OTX-imported NPCs reference these extra keys.
+	MESSAGE_PLACEDINQUEUE = 24 -- Greet variant when the player is queued for an interaction.
+	MESSAGE_INFO_DESCR = 25 -- Sent on look (description response).
+	MESSAGE_EVENT_ADVANCE = 26 -- Sent when the player completes a sub-step inside a quest.
 
 	-- Constant indexes for callback functions. These are also used for module callback ids.
 	CALLBACK_CREATURE_APPEAR = 1
@@ -98,7 +102,10 @@ if NpcHandler == nil then
 			[MESSAGE_ONCLOSESHOP] = "Thank you, come back whenever you're in need of something else.",
 			[MESSAGE_ALREADYFOCUSED] = "|PLAYERNAME|, I am already talking to you.",
 			[MESSAGE_WALKAWAY_MALE] = "Good bye.",
-			[MESSAGE_WALKAWAY_FEMALE] = "Good bye."
+			[MESSAGE_WALKAWAY_FEMALE] = "Good bye.",
+			[MESSAGE_PLACEDINQUEUE] = "Have patience, |PLAYERNAME|. I'll be with you in a moment.",
+			[MESSAGE_INFO_DESCR] = "It's |ITEMNAME|.",
+			[MESSAGE_EVENT_ADVANCE] = "Congratulations, |PLAYERNAME|."
 		}
 	}
 

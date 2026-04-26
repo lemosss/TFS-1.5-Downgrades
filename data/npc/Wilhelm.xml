@@ -1,0 +1,11 @@
+<npc name="Wilhelm" script="wilhelm.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="150" max="150"/>
+	<look type="160" head="58" body="80" legs="57" feet="95" addons="0" corpse="2212"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+		<parameter key="message_greet" value="Hiho, Hiho, |PLAYERNAME|! What can I do for you?" /> 
+                <parameter key="message_farewell" value="Good bye." /> 
+                <parameter key="message_walkaway" value="Yeah, bye." />  
+                <parameter key="message_placedinqueue" value="Hey, |PLAYERNAME| gimme a minute, ok?" />                                               
+	</parameters>
+</npc>

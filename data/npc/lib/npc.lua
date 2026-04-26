@@ -1,6 +1,23 @@
 -- Including the Advanced NPC System
 dofile('data/npc/lib/npcsystem/npcsystem.lua')
 
+-- OTX item-id aliases (Cfbread, Cfcheese, ...) referenced by imported NPC scripts
+dofile('data/npc/lib/otx_item_aliases.lua')
+
+-- OTX compat shims (NPCs imported from OTX use these)
+function getDataDir()
+	return 'data/'
+end
+
+function domodlib(name)
+	local path = 'data/mods/' .. name .. '.lua'
+	local f = io.open(path, 'r')
+	if f then
+		f:close()
+		dofile(path)
+	end
+end
+
 function msgcontains(message, keyword)
 	local message, keyword = message:lower(), keyword:lower()
 	if message == keyword then

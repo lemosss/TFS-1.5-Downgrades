@@ -30,7 +30,7 @@
 		<attack name="melee" chance="20" min="-150" max="-500">
 			<attribute key="shootEffect" value="arrow"/>
 		</attack>
-		<attack name="paralyze_omruc" chance="25" range="7"/>
+		<attack name="speed" interval="2000" chance="25" range="7" speedchange="-300" duration="10000" target="1"><attribute key="areaEffect" value="redshimmer"/></attack>
 	</attacks>
 	<defenses armor="20" defense="243">
 		<defense name="healing" chance="17" min="100" max="200">

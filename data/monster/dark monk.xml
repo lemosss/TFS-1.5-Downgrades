@@ -25,7 +25,7 @@
 		<defense name="healing" chance="12" min="25" max="49">
 			<attribute key="areaEffect" value="blueshimmer"/>
 		</defense>
-		<defense name="haste_darkmonk" chance="10"/>
+		<defense name="speed" interval="2000" chance="10" speedchange="320" duration="5000"><attribute key="areaEffect" value="redshimmer"/></defense>
 	</defenses>
 	<elements>
 	</elements>

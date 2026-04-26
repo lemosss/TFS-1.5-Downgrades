@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<npc name="Tristan" script="Tristan.lua" walkinterval="2000" floorchange="0">
+<health now="100" max="100"/>
+<look type="302" head="79" body="47" legs="48" feet="38" addons="1" />
+<parameters>
+<parameter key="message_greet" value="Hello |PLAYERNAME|, I can teach spells for knights." />
+
+<parameter key="module_keywords" value="1" />
+<parameter key="keywords" value="spells" />
+
+<parameter key="keyword_reply1" value="I can teach you, antidote, find person, great light, light and light healing." />
+</parameters>
+</npc>

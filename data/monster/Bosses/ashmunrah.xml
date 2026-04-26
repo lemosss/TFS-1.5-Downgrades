@@ -28,7 +28,7 @@
 			<attribute key="shootEffect" value="energy"/>
 			<attribute key="areaEffect" value="mortarea"/>
 		</attack>
-		<attack name="paralyze_ashmunrah" chance="25" range="7"/>
+		<attack name="speed" interval="2000" chance="25" range="7" speedchange="-300" duration="10000" target="1"><attribute key="areaEffect" value="redshimmer"/></attack>
 		<attack name="lifedrain" chance="18" length="8" spread="3" min="-50" max="-550">
 			<attribute key="areaEffect" value="yellowbubble"/>
 		</attack>

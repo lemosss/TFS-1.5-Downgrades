@@ -1,0 +1,11 @@
+<npc name="Emma" script="adrenius.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="150" max="150"/>
+	<look type="136" head="76" body="86" legs="86" feet="96" addons="0" corpse="2212"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+		<parameter key="message_greet" value="Welcome to Carlin Furniture Store |PLAYERNAME|." />
+                <parameter key="message_walkaway" value="Good bye." />
+                <parameter key="message_farewell" value="Good bye." />
+                <parameter key="message_placedinqueue" value="One moment please |PLAYERNAME|." />
+	</parameters>
+</npc>

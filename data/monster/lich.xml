@@ -22,7 +22,7 @@
 		<attack name="lifedrain" chance="4" range="1" min="-50" max="-250">
 			<attribute key="areaEffect" value="blueshimmer"/>
 		</attack>
-		<attack name="paralyze_lich" chance="15" range="7"/>
+		<attack name="speed" interval="2000" chance="15" range="7" speedchange="-300" duration="10000" target="1"><attribute key="areaEffect" value="redshimmer"/></attack>
 		<attack name="lifedrain" chance="17" radius="3" target="0" min="-120" max="-200">
 			<attribute key="areaEffect" value="redshimmer"/>
 		</attack>

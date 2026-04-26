@@ -1,0 +1,14 @@
+<npc name="Anthony" script="anthony.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="150" max="150"/>
+	<look type="128" head="58" body="68" legs="109" feet="131" corpse="2212"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+		<parameter key="message_greet" value="Welcome to Anthony's Hut. You heard about the news?" />
+                <parameter key="message_farewell" value="Please come back from time to time." />
+                <parameter key="message_walkaway" value="Please come back from time to time." />
+                <parameter key="message_onbuy" value="Here it is." />
+		<parameter key="shop_buyable" value="bread,2689,4;ham,2671,8;cheese,2696,6;meat,2666,5;" />
+                <parameter key="message_placedinqueue" value="Just a minute, |PLAYERNAME|. I'll be with you in no time." />
+		<parameter key="message_needmoremoney" value="I am sorry, but you do not have enough gold." />
+	</parameters>
+</npc>

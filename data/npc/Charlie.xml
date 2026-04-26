@@ -1,0 +1,10 @@
+<npc name="Charlie" nameDescription="Charlie, the parcel and letters ventor" script="charlie.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="150" max="150"/>
+	<look type="128" head="116" body="79" legs="117" feet="76" addons="0" corpse="2212"/>
+	<parameters>
+		<parameter key="message_greet" value="Hello |PLAYERNAME|. I sell parcels, letters and labels."/>
+		<parameter key="module_shop" value="1"/>
+		<parameter key="shop_buyable" value="label,2599,5;parcel,2595,15;letter,2597,10"/>
+		<parameter key="message_decline" value="Is |TOTALCOST| gold coins too much for you? Get out of here!"/>
+	</parameters>
+</npc>

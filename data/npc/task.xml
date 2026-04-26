@@ -1,0 +1,10 @@
+<npc name="David Freeman" script="task.lua" walkinterval="2500" floorchange="0" access="5" level="1" maglevel="1">
+	<health now="150" max="150"/>
+	<look type="128" head="98" body="87" legs="12" feet="114" addons="0" corpse="2212"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+                <parameter key="message_greet" value="Ahoi, young man |PLAYERNAME|. What are you looking for?" />
+                <parameter key="message_farewell" value="Good bye and don't forget me!" />
+                <parameter key="message_walkaway" value="Good bye and don't forget me!" />
+	</parameters>
+</npc>

@@ -1,0 +1,14 @@
+<npc name="Conny" script="conny.lua" access="5" walkinterval="2500" lookdir="1">
+	<health now="150" max="150"/>
+	<look type="129" head="58" body="68" legs="100" feet="95" corpse="2212"/>
+	<parameters>
+		<parameter key="module_shop" value="1" />
+		<parameter key="message_greet" value="Oh, please come in, |PLAYERNAME|. What do you need?" />
+                <parameter key="message_farewell" value="Good bye." />
+                <parameter key="message_walkaway" value="Good bye." />
+                <parameter key="message_onbuy" value="Here you are." />
+                <parameter key="message_needmoremoney" value="Come back, when you have enough money." />
+                <parameter key="message_decline_both" value="Hmm, but next time." />
+                <parameter key="message_placedinqueue" value="Sorry |PLAYERNAME|, I am already talking to a customer. Wait a moment." />
+	</parameters>
+</npc>
