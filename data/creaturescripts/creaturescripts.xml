@@ -17,8 +17,6 @@
 	<event type="login" name="PlayerLight" script="light.lua"/>
 	<!-- SkillStages disabled by user choice — server uses rateSkill/rateMagic
 	     from config.lua instead of OTX per-skill stage multipliers. -->
-	<event type="login" name="MonsterBoost_login" script="monster_boost.lua"/>
-	<event type="kill" name="MonsterBoost_kill" script="monster_boost.lua"/>
 	<event type="login" name="YalaharWaves_login" script="yalahar_waves.lua"/>
 	<event type="death" name="YalaharWaves_death" script="yalahar_waves.lua"/>
 	<event type="death" name="BossAnniDeathh" script="boss_annihi.lua"/>

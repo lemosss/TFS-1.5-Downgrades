@@ -93,7 +93,6 @@
 	<talkaction access="0-4" words="!frags;/frags" script="frags.lua"/>
 	<talkaction access="0-4" words="!sharing;/sharing;/expsharing;!expsharing" script="partyshareexp.lua"/>
 	<talkaction words="!offer" script="auctionsystem.lua"/>
-	<talkaction words="/mboost" script="monster_boost.lua"/>
 	<talkaction access="0-4" words="alana res;/buyhouse;!buyhouse" filter="word-spaced" event="function" value="houseBuy"/>
 	<talkaction access="0-4" words="alana grav;/sellhouse;!sellhouse" filter="word-spaced" event="function" value="houseSell"/>
 	<talkaction access="0-4" words="alana sio" filter="word-spaced" event="function" value="houseKick"/>

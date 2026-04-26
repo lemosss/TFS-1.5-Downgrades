@@ -14,8 +14,5 @@
 	<globalevent name="shop" interval="30000" script="shop.lua"/>
 	<globalevent name="Mensagem" interval="900000" script="msg.lua"/>
 	<globalevent name="Save" interval="3600000" script="save.lua"/>
-	<globalevent name="MonsterBoost_startup" type="startup" script="monster_boost.lua"/>
-	<globalevent name="MonsterBoost_think" interval="3000" script="monster_boost.lua"/>
-	<globalevent name="MonsterBoost_time" time="00:01" script="monster_boost.lua"/>
 	<globalevent name="tiles" interval="3000" script="tiles.lua"/>
 </globalevents>

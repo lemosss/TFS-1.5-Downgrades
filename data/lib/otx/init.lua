@@ -14,7 +14,8 @@ safeDofile('data/lib/otx/exhaustion.lua')
 safeDofile('data/lib/otx/ppoints.lua')
 
 safeDofile('data/lib/otx/lib_mounts.lua')
-safeDofile('data/lib/otx/monster_boost.lua')
+-- monster_boost feature removed: depends on OTX-only `global_storage` table
+-- and a hardcoded showcase room layout that doesn't exist in our map.
 safeDofile('data/lib/otx/yalahar_waves.lua')
 safeDofile('data/lib/otx/arena.lua')
 safeDofile('data/lib/otx/boss_annihi.lua')
