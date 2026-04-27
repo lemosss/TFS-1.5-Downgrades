@@ -36,13 +36,18 @@ def normalize_entry(line, is_movement):
 
     # 1) For movements: type="StepIn"  ->  event="StepIn"
     if is_movement:
-        # OTX has event="script" + type="StepIn"; we want event="StepIn"
+        # OTX has event="script" + type="StepIn"; we want event="StepIn".
+        # Some OTX entries have only type="..." with script="..." (no event="script");
+        # for those we still need to translate type= into event=.
         m_type = re.search(r'\btype="([^"]+)"', line)
         if m_type and m_type.group(1).lower() in MOVE_EVENT_TYPES:
-            # Drop the `type=` attribute (we'll replace event="script" with event="StepIn" below)
+            event_name = m_type.group(1)
             line = re.sub(r'\s*type="[^"]+"', '', line, count=1)
-            # Replace event="script" with event="StepIn"
-            line = re.sub(r'\bevent="script"', f'event="{m_type.group(1)}"', line, count=1)
+            if re.search(r'\bevent="script"', line):
+                line = re.sub(r'\bevent="script"', f'event="{event_name}"', line, count=1)
+            elif not re.search(r'\bevent=', line):
+                # No event= at all — inject one right after the opening tag
+                line = re.sub(r'<movevent\b', f'<movevent event="{event_name}"', line, count=1)
     else:
         # For non-movements, simply drop event="script" since we'll replace value= with script=.
         # For event="function" we keep both attributes (TFS reads them as-is).
