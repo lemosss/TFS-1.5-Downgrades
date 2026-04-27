@@ -620,7 +620,10 @@ if Modules == nil then
 					if subType == nil and it:isFluidContainer() then
 						print("[Warning : " .. Npc():getName() .. "] NpcSystem:", "SubType missing for parameter item:", item)
 					else
-						self:addBuyableItem(nil, itemid, cost, subType, realName)
+						-- If realName (5th XML field) is absent, fall back to the
+						-- shop entry name so fluid vials show as "life fluid" /
+						-- "mana fluid" instead of the base "vial" item name.
+						self:addBuyableItem(nil, itemid, cost, subType, realName or name)
 					end
 				else
 					print("[Warning : " .. Npc():getName() .. "] NpcSystem:", "Parameter(s) missing for item:", itemid, cost)
