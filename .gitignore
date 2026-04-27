@@ -184,3 +184,6 @@ pip-log.txt
 ## TFS / OT
 #############
 config.lua
+
+# Map binary — kept zipped at data/world/world.otbm.zip (auto-extracted by start.bat)
+data/world/world.otbm
