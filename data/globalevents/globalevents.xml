@@ -9,9 +9,9 @@
 
 
 	<!-- ===== Auto-imported from OTX ===== -->
-	<!-- init.lua + GlobalSave.lua removed: depend on OTX schema (guilds.checkdata,
-	     players.world_id, bans, guild_wars.begin, player_statements) which TFS doesn't have. -->
-	<globalevent name="shop" interval="30000" script="shop.lua"/>
+	<!-- init.lua + GlobalSave.lua + shop.lua removed: depend on OTX schema
+	     (guilds.checkdata, players.world_id, bans, z_ots_comunication, etc)
+	     and a Znote-AAC-style website integration that we don't have. -->
 	<globalevent name="Mensagem" interval="900000" script="msg.lua"/>
 	<globalevent name="Save" interval="3600000" script="save.lua"/>
 	<globalevent name="tiles" interval="3000" script="tiles.lua"/>

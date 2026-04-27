@@ -69,7 +69,7 @@ do
 		local methods = getmetatable(self)
 		if key == "itemid" then
 			return methods.getId(self)
-		elseif key == "actionid" then
+		elseif key == "actionid" or key == "aid" then  -- 'aid' is OTX alias
 			return methods.getActionId(self)
 		elseif key == "uid" then
 			return methods.getUniqueId(self)
