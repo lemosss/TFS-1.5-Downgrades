@@ -635,7 +635,10 @@ if Modules == nil then
 					else
 						local names = {}
 						names[#names + 1] = name
-						self:addBuyableItem(names, itemid, cost, subType, realName)
+						-- Fall back to shop entry name when no explicit realName
+						-- (5th XML field) so fluid vials show as "life fluid" /
+						-- "mana fluid" in the trade window instead of "vial".
+						self:addBuyableItem(names, itemid, cost, subType, realName or name)
 					end
 				else
 					print("[Warning : " .. Npc():getName() .. "] NpcSystem:", "Parameter(s) missing for item:", name, itemid, cost)
