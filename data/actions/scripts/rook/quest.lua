@@ -112,7 +112,7 @@ elseif item.uid == 7012 then
 	doPlayerSendTextMessage(cid,22,"You have found a bag.")
 	BEARROOMBAG = doPlayerAddItem(cid, 1987, 1)
 	doAddContainerItem(BEARROOMBAG, Cfarrow, 12)
-	doAddContainerItem(BEARROOMBAG, cfcoppercoin, 40)
+	doAddContainerItem(BEARROOMBAG, 2148, 40)  -- 2148 = gold coin (typo 'cfcoppercoin' was nil)
 	setPlayerStorageValue(cid,7012,1)
 	else
 	doPlayerSendTextMessage(cid,22,"it's empty.")
@@ -178,7 +178,7 @@ elseif item.uid == 7016 then
 	GOBBLINTEMPLEBAG1 = doPlayerAddItem(cid, 1987, 1)
 	doAddContainerItem(GOBBLINTEMPLEBAG1, Cfpan, 1)
 	doAddContainerItem(GOBBLINTEMPLEBAG1, Cfsmallstone, 5)
-	doAddContainerItem(GOBBLINTEMPLEBAG1, cfcoppercoin, 50)
+	doAddContainerItem(GOBBLINTEMPLEBAG1, 2148, 50)  -- 2148 = gold coin
 	setPlayerStorageValue(cid,7016,1) 
 	else
 	doPlayerSendTextMessage(cid,22,"it's empty.")
