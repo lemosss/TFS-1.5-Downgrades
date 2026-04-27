@@ -3377,11 +3377,12 @@ void ProtocolGame::AddShopItem(NetworkMessage& msg, const ShopInfo& item)
 	msg.add<uint16_t>(it.clientId);
 
 	if (it.isSplash() || it.isFluidContainer()) {
-		// 7.72 client only understands the 8-color fluid byte (fluidMap),
-		// not the 18-entry serverFluidToClient table used by 8.6+. Match the
-		// inventory render path (networkmessage.cpp:131) so life fluid /
-		// mana fluid show with the right colour in the trade window.
-		msg.addByte(fluidMap[item.subType & 7]);
+		// 7.72 client interprets the fluid byte via FluidColors_t directly
+		// (0=empty 1=blue 2=red 3=brown 4=green 5=yellow 6=white 7=purple),
+		// NOT via the ClientFluidTypes_t remap that fluidMap[] performs for
+		// 8.6+ clients. Send subType & 7 raw so life fluid (FLUID_RED=2) and
+		// mana fluid (FLUID_PURPLE=7) render with the right sprite tint.
+		msg.addByte(item.subType & 7);
 	} else {
 		msg.addByte(0x00);
 	}
