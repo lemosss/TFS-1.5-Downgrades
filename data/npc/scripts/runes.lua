@@ -35,20 +35,20 @@ shopModule:addSellableItem({'empty potion flask', 'empty flask'}, 7636, 5, 'empt
 shopModule:addSellableItem({'strong potion flask', 'strong flask'}, 7634, 10, 'empty strong potion flask')
 shopModule:addSellableItem({'great potion flask', 'great flask'}, 7635, 15, 'empty great potion flask')
 
-shopModule:addBuyableItem({'intense healing'}, 2265, 95, 1, 'intense healing rune')
-shopModule:addBuyableItem({'ultimate healing'}, 2273, 175, 1, 'ultimate healing rune')
-shopModule:addBuyableItem({'magic wall'}, 2293, 350, 1, 'magic wall rune')
-shopModule:addBuyableItem({'destroy field'}, 2261, 45, 1, 'destroy field rune')
-shopModule:addBuyableItem({'light magic missile'}, 2287, 40, 1, 'light magic missile rune')
-shopModule:addBuyableItem({'heavy magic missile'}, 2311, 120, 1, 'heavy magic missile rune')
-shopModule:addBuyableItem({'great fireball'}, 2304, 180, 1, 'great fireball rune')
-shopModule:addBuyableItem({'explosion'}, 2313, 250, 1, 'explosion rune')
-shopModule:addBuyableItem({'sudden death'}, 2268, 350, 1, 'sudden death rune')
-shopModule:addBuyableItem({'paralyze'}, 2278, 700, 1, 'paralyze rune')
-shopModule:addBuyableItem({'animate dead'}, 2316, 375, 1, 'animate dead rune')
-shopModule:addBuyableItem({'convince creature'}, 2290, 80, 1, 'convince creature rune')
-shopModule:addBuyableItem({'chameleon'}, 2291, 210, 1, 'chameleon rune')
-shopModule:addBuyableItem({'disintegrate'}, 2310, 80, 1, 'disintegrate rune')
+-- shopModule:addBuyableItem({'intense healing'}, 2265, 95, 1, 'intense healing rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'ultimate healing'}, 2273, 175, 1, 'ultimate healing rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'magic wall'}, 2293, 350, 1, 'magic wall rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'destroy field'}, 2261, 45, 1, 'destroy field rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'light magic missile'}, 2287, 40, 1, 'light magic missile rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'heavy magic missile'}, 2311, 120, 1, 'heavy magic missile rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'great fireball'}, 2304, 180, 1, 'great fireball rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'explosion'}, 2313, 250, 1, 'explosion rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'sudden death'}, 2268, 350, 1, 'sudden death rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'paralyze'}, 2278, 700, 1, 'paralyze rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'animate dead'}, 2316, 375, 1, 'animate dead rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'convince creature'}, 2290, 80, 1, 'convince creature rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'chameleon'}, 2291, 210, 1, 'chameleon rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'disintegrate'}, 2310, 80, 1, 'disintegrate rune')  -- runes not sold by NPCs
 
 shopModule:addBuyableItemContainer({'bp ap'}, 2002, 8474, 2000, 1, 'backpack of antidote potions')
 shopModule:addBuyableItemContainer({'bp slhp'}, 2000, 8704, 400, 1, 'backpack of small health potions')

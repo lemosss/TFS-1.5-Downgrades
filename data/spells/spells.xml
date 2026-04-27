@@ -1,32 +1,32 @@
 <?xml version="1.0"?>
 <spells>
 	<!-- Rune Spells -->
-	<rune name="adevo grav pox" id="2285" allowfaruse="1" maglv="0" blocktype="solid" charges="3" script="runes/poison_field_rune.lua"/>
-	<rune name="adura gran" id="2265"  allowfaruse="1" maglv="1" needtarget="1" aggressive="0" charges="1" script="runes/intense_healing_rune.lua" />
-	<rune name="adana pox" id="2266" allowfaruse="1" needtarget="1" aggressive="0" charges="1" script="runes/antidote_rune.lua" />
+	<rune name="adevo grav pox" id="2285" allowfaruse="1" maglv="0" blocktype="solid" charges="5" script="runes/poison_field_rune.lua"/>
+	<rune name="adura gran" id="2265"  allowfaruse="1" maglv="1" needtarget="1" aggressive="0" charges="5" script="runes/intense_healing_rune.lua" />
+	<rune name="adana pox" id="2266" allowfaruse="1" needtarget="1" aggressive="0" charges="5" script="runes/antidote_rune.lua" />
 	<rune name="adori" id="2287" allowfaruse="1" needtarget="1" charges="5" script="runes/light_magic_missile_rune.lua" />
-	<rune name="adevo grav flam" id="2301" allowfaruse="1" maglv="1" blocktype="solid" charges="3" script="runes/fire_field_rune.lua" />
-	<rune name="adeta sio" id="2290" allowfaruse="1" maglv="5" needtarget="1" charges="1" script="runes/convince_creature_rune.lua" /> 
-	<rune name="adito grav" id="2261" allowfaruse="1" maglv="3" range="4" blocktype="solid" aggressive="0" charges="3" script="runes/destroy_field_rune.lua" />
-	<rune name="adevo grav vis" id="2277" allowfaruse="1" maglv="3" blocktype="solid" charges="3" script="runes/energy_field_rune.lua" />
-	<rune name="adito tera" id="2310" allowfaruse="1" maglv="4" charges="3" range="1" script="runes/desintegrate_rune.lua" />
+	<rune name="adevo grav flam" id="2301" allowfaruse="1" maglv="1" blocktype="solid" charges="5" script="runes/fire_field_rune.lua" />
+	<rune name="adeta sio" id="2290" allowfaruse="1" maglv="5" needtarget="1" charges="5" script="runes/convince_creature_rune.lua" /> 
+	<rune name="adito grav" id="2261" allowfaruse="1" maglv="3" range="4" blocktype="solid" aggressive="0" charges="5" script="runes/destroy_field_rune.lua" />
+	<rune name="adevo grav vis" id="2277" allowfaruse="1" maglv="3" blocktype="solid" charges="5" script="runes/energy_field_rune.lua" />
+	<rune name="adito tera" id="2310" allowfaruse="1" maglv="4" charges="5" range="1" script="runes/desintegrate_rune.lua" />
 	<rune name="adura vita" id="2273" allowfaruse="1" maglv="4" needtarget="1" aggressive="0" charges="1" script="runes/ultimate_healing_rune.lua" />
 	<rune name="adori gran" id="2311" allowfaruse="1" maglv="3" needtarget="1" charges="5" script="runes/heavy_magic_missile_rune.lua"/>
-	<rune name="adevo mas pox" id="2286" allowfaruse="1" maglv="4" blocktype="solid" charges="2" script="runes/poison_bomb_rune.lua" />
-	<rune name="adevo mas flam" id="2305" allowfaruse="1" maglv="5" blocktype="solid" charges="2" script="runes/fire_bomb_rune.lua" />
-	<rune name="adevo res flam" id="2308" allowfaruse="1" maglv="7" needtarget="1" charges="2" script="runes/soulfire_rune.lua" />
-	<rune name="adevo ina" id="2291" allowfaruse="1" maglv="4" selftarget="1" blocktype="solid" charges="1" script="runes/chameleon_rune.lua" /> <!-- broken somehow -->
-	<rune name="adori flam" id="2302" allowfaruse="1" maglv="4" charges="3" script="runes/fireball_rune.lua" />
-	<rune name="adana mort" id="2316" allowfaruse="1" maglv="4" blocktype="solid" charges="2" script="runes/animate_dead_rune.lua" />
-	<rune name="adevo mas grav pox" id="2289" allowfaruse="1" maglv="5" blocktype="solid" charges="4" script="runes/poison_wall_rune.lua" />
+	<rune name="adevo mas pox" id="2286" allowfaruse="1" maglv="4" blocktype="solid" charges="5" script="runes/poison_bomb_rune.lua" />
+	<rune name="adevo mas flam" id="2305" allowfaruse="1" maglv="5" blocktype="solid" charges="5" script="runes/fire_bomb_rune.lua" />
+	<rune name="adevo res flam" id="2308" allowfaruse="1" maglv="7" needtarget="1" charges="5" script="runes/soulfire_rune.lua" />
+	<rune name="adevo ina" id="2291" allowfaruse="1" maglv="4" selftarget="1" blocktype="solid" charges="5" script="runes/chameleon_rune.lua" /> <!-- broken somehow -->
+	<rune name="adori flam" id="2302" allowfaruse="1" maglv="4" charges="5" script="runes/fireball_rune.lua" />
+	<rune name="adana mort" id="2316" allowfaruse="1" maglv="4" blocktype="solid" charges="5" script="runes/animate_dead_rune.lua" />
+	<rune name="adevo mas grav pox" id="2289" allowfaruse="1" maglv="5" blocktype="solid" charges="5" script="runes/poison_wall_rune.lua" />
 	<rune name="adori gran flam" id="2304" allowfaruse="1" maglv="4" charges="2" script="runes/great_fireball_rune.lua" />
-	<rune name="adevo mas hur" id="2313" allowfaruse="1" maglv="6" charges="3" script="runes/explosion_rune.lua" />
-	<rune name="adevo grav tera" id="2293" allowfaruse="1" maglv="9" blocktype="all" charges="3" script="runes/magic_wall_rune.lua" />
-	<rune name="adevo mas grav flam" id="2303" allowfaruse="1" maglv="6" blocktype="solid" charges="4" script="runes/fire_wall_rune.lua" />
-	<rune name="adevo mas vis" id="2262" allowfaruse="1" maglv="10" blocktype="solid" charges="2" script="runes/energy_bomb_rune.lua" />
-	<rune name="adevo mas grav vis" id="2279" allowfaruse="1" maglv="9" blocktype="solid" charges="4" script="runes/energy_wall_rune.lua" />
-	<rune name="adori vita vis" id="2268" allowfaruse="1" maglv="15" needtarget="1" charges="1" script="runes/sudden_death_rune.lua" />
-	<rune name="adevo res pox" id="2292" allowfaruse="1" maglv="4" needtarget="1" charges="3" script="runes/envenom_rune.lua" />
+	<rune name="adevo mas hur" id="2313" allowfaruse="1" maglv="6" charges="5" script="runes/explosion_rune.lua" />
+	<rune name="adevo grav tera" id="2293" allowfaruse="1" maglv="9" blocktype="all" charges="5" script="runes/magic_wall_rune.lua" />
+	<rune name="adevo mas grav flam" id="2303" allowfaruse="1" maglv="6" blocktype="solid" charges="5" script="runes/fire_wall_rune.lua" />
+	<rune name="adevo mas vis" id="2262" allowfaruse="1" maglv="10" blocktype="solid" charges="5" script="runes/energy_bomb_rune.lua" />
+	<rune name="adevo mas grav vis" id="2279" allowfaruse="1" maglv="9" blocktype="solid" charges="5" script="runes/energy_wall_rune.lua" />
+	<rune name="adori vita vis" id="2268" allowfaruse="1" maglv="15" needtarget="1" charges="5" script="runes/sudden_death_rune.lua" />
+	<rune name="adevo res pox" id="2292" allowfaruse="1" maglv="4" needtarget="1" charges="5" script="runes/envenom_rune.lua" />
 	<rune name="adana ani" id="2278" allowfaruse="1" maglv="18" needtarget="1" mana="1400" charges="1" script="runes/paralyze_rune.lua">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>

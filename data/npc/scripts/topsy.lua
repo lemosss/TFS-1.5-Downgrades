@@ -269,18 +269,18 @@ shopModule:addBuyableItem({'mana fluid','manafluid'},2006,55,7,'mana fluid')
 
 shopModule:addBuyableItem({'intense healing rune', 'ih'}, 2265, 95, 1, 'intense healing rune')
 shopModule:addBuyableItem({'ultimate healing rune', 'uh'}, 2273, 125, 1, 'ultimate healing rune')
-shopModule:addBuyableItem({'magic wall rune'}, 2293, 200, 3, 'magic wall rune')
-shopModule:addBuyableItem({'destroy field rune'}, 2261, 45, 3, 'destroy field rune')
-shopModule:addBuyableItem({'light magic missile rune'}, 2287, 40, 10, 'light magic missile rune')
+-- shopModule:addBuyableItem({'magic wall rune'}, 2293, 200, 3, 'magic wall rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'destroy field rune'}, 2261, 45, 3, 'destroy field rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'light magic missile rune'}, 2287, 40, 10, 'light magic missile rune')  -- runes not sold by NPCs
 shopModule:addBuyableItem({'heavy magic missile rune', 'hmm'}, 2311, 50, 5, 'heavy magic missile rune')
 shopModule:addBuyableItem({'great fireball rune', 'gfb'}, 2304, 100, 4, 'great fireball rune')
 shopModule:addBuyableItem({'explosion rune', 'explosion'}, 2313, 150, 3, 'explosion rune')
 shopModule:addBuyableItem({'sudden death rune', 'sd'}, 2268, 225, 1, 'sudden death rune')
-shopModule:addBuyableItem({'death arrow rune'}, 2263, 300, 3, 'death arrow rune')
-shopModule:addBuyableItem({'animate dead rune'}, 2316, 375, 1, 'animate dead rune')
-shopModule:addBuyableItem({'convince creature rune'}, 2290, 80, 1, 'convince creature rune')
-shopModule:addBuyableItem({'chameleon rune'}, 2291, 210, 1, 'chameleon rune')
-shopModule:addBuyableItem({'desintegrate'}, 2310, 80,  3, 'desintegreate rune')
+-- shopModule:addBuyableItem({'death arrow rune'}, 2263, 300, 3, 'death arrow rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'animate dead rune'}, 2316, 375, 1, 'animate dead rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'convince creature rune'}, 2290, 80, 1, 'convince creature rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'chameleon rune'}, 2291, 210, 1, 'chameleon rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'desintegrate'}, 2310, 80,  3, 'desintegreate rune')  -- runes not sold by NPCs
 shopModule:addBuyableItem({'blank', 'rune'},2260, 10,'blank rune')
 end
 

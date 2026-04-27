@@ -14,28 +14,28 @@ npcHandler:addModule(shopModule)
 shopModule:addBuyableItem({'spellbook'}, 2175, 150, 1, 'spellbook')
 shopModule:addBuyableItem({'magic lightwand'}, 2163, 400, 1, 'magic lightwand')
 
-shopModule:addBuyableItem({'instense healing'}, 2265, 95, 1, 'intense healing rune')
+-- shopModule:addBuyableItem({'instense healing'}, 2265, 95, 1, 'intense healing rune')  -- runes not sold by NPCs
 shopModule:addBuyableItem({'ultimate healing'}, 2274, 175, 1, 'ultimate healing rune')
-shopModule:addBuyableItem({'fire bomb'}, 2305, 117, 2, 'fire bomb')
-shopModule:addBuyableItem({'destroy field'}, 2261, 15, 3, 'destroy field rune')
-shopModule:addBuyableItem({'light magic missile'}, 2287, 4, 10, 'light magic missile rune')
-shopModule:addBuyableItem({'heavy magic missile'}, 2311, 12, 10, 'heavy magic missile rune')
-shopModule:addBuyableItem({'great fireball'}, 2304, 45, 4, 'great fireball rune')
-shopModule:addBuyableItem({'explosion'}, 2313, 31, 6, 'explosion rune')
-shopModule:addBuyableItem({'sudden death'}, 2268, 108, 10, 'sudden death rune')
-shopModule:addBuyableItem({'convince creature'}, 2290, 80, 1, 'convince creature rune')
-shopModule:addBuyableItem({'chameleon'}, 2291, 210, 1, 'chameleon rune')
-shopModule:addBuyableItem({'desintegrate'}, 2310, 80,  3, 'desintegreate rune')
-shopModule:addBuyableItem({'fire field'}, 2301, 28,  3, 'fire field rune')
-shopModule:addBuyableItem({'energy field'}, 2301, 38,  3, 'energy field rune')
+-- shopModule:addBuyableItem({'fire bomb'}, 2305, 117, 2, 'fire bomb')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'destroy field'}, 2261, 15, 3, 'destroy field rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'light magic missile'}, 2287, 4, 10, 'light magic missile rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'heavy magic missile'}, 2311, 12, 10, 'heavy magic missile rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'great fireball'}, 2304, 45, 4, 'great fireball rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'explosion'}, 2313, 31, 6, 'explosion rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'sudden death'}, 2268, 108, 10, 'sudden death rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'convince creature'}, 2290, 80, 1, 'convince creature rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'chameleon'}, 2291, 210, 1, 'chameleon rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'desintegrate'}, 2310, 80,  3, 'desintegreate rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'fire field'}, 2301, 28,  3, 'fire field rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'energy field'}, 2301, 38,  3, 'energy field rune')  -- runes not sold by NPCs
 shopModule:addBuyableItem({'avalanche rune'}, 2274, 45,  4, 'avalanche rune')
-shopModule:addBuyableItem({'antidote rune'}, 2266, 65,  1, 'antidote rune')
-shopModule:addBuyableItem({'energy wall'}, 2279, 85,  4, 'energy wall rune')
+-- shopModule:addBuyableItem({'antidote rune'}, 2266, 65,  1, 'antidote rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'energy wall'}, 2279, 85,  4, 'energy wall rune')  -- runes not sold by NPCs
 shopModule:addBuyableItem({'icicle'}, 2271, 30,  5, 'icicle rune')
-shopModule:addBuyableItem({'poison field'}, 2285, 21,  3, 'poison field rune')
-shopModule:addBuyableItem({'poison wall'}, 2289, 52,  4, 'poison wall rune')
-shopModule:addBuyableItem({'blank'}, 2260, 10,  1, 'blank rune')
-shopModule:addBuyableItem({'fire ball'}, 2302, 30,  5, 'fire ball rune')
+-- shopModule:addBuyableItem({'poison field'}, 2285, 21,  3, 'poison field rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'poison wall'}, 2289, 52,  4, 'poison wall rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'blank'}, 2260, 10,  1, 'blank rune')  -- runes not sold by NPCs
+-- shopModule:addBuyableItem({'fire ball'}, 2302, 30,  5, 'fire ball rune')  -- runes not sold by NPCs
 
 
 shopModule:addBuyableItemContainer({'bp blank'},     1998, 2260, 220, 1, 'bp blank rune')

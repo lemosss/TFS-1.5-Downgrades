@@ -11,6 +11,6 @@ function onThink() 						npcHandler:onThink() end
 
 local shopModule = ShopModule:new()
 npcHandler:addModule(shopModule)
-shopModule:addBuyableItem({'antidote rune'},2266, 40,'antidote rune')
+-- shopModule:addBuyableItem({'antidote rune'},2266, 40,'antidote rune')  -- runes not sold by NPCs
 
 npcHandler:addModule(FocusModule:new())

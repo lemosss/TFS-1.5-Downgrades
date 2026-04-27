@@ -21,7 +21,7 @@
 
 
 <parameter key="module_shop" value="1" />
-		<parameter key="shop_buyable" value="barrel,1774,12;dresser,1724,70;box,1739,10;large trunk,1750,18;drawer,1716,18;locker,1732,30;Trough,1728,10;" />
+		<parameter key="shop_buyable" value="barrel,1774,12;dresser,1724,70;box,1739,10;large trunk,1750,18;drawer,1716,18;locker,1732,30;Trough,1728,10" />
     </parameters>
 </npc>
 

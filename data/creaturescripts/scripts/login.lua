@@ -29,5 +29,6 @@ function onLogin(player)
 	player:registerEvent("PlayerDeath")
 	player:registerEvent("DropLoot")
 	player:registerEvent("ShopBuy")
+	player:registerEvent("TaskKill")
 	return true
 end

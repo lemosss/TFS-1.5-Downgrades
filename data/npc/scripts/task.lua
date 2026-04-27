@@ -52,7 +52,8 @@ function creatureSayCallback(cid, type, msg)
                 if not tonumber(contagem) then return npcHandler:say('You already finished the '..msg..' task.', cid) end
 
                 setPlayerStorageValue(cid, tasktabble[msg].storage_start, 1)
-                npcHandler:say("Great! Come back once you killed "..string.sub(((contagem)-1)-tasktabble[msg].count, 2).." "..msg..".", cid)
+                local remaining = math.floor(tasktabble[msg].count - (contagem - 1))
+                npcHandler:say(string.format("Great! Come back once you killed %d %s.", remaining, msg), cid)
                 talkState[talkUser] = 0
             else
                 npcHandler:say('You can only have '..max_task_per_time..' tasks per time.', cid)
@@ -101,7 +102,7 @@ function creatureSayCallback(cid, type, msg)
                     talkState[talkUser] = 0
                     break
                 else
-                    npcHandler:say('Your '..k..' task is not completed yet, you just killed '..((contagem)-1)..'/'..v.count..' '..k..'.', cid)
+                    npcHandler:say(string.format("Your %s task is not completed yet, you just killed %d/%d %s.", k, math.floor(contagem - 1), math.floor(v.count), k), cid)
                 end
             end
         end
