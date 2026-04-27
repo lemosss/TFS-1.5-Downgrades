@@ -617,6 +617,18 @@ if NpcHandler == nil then
 			return self:doNPCTalkALot(message, delay or 6000, focus)
 		end
 
+		-- OTX scripts often call npcHandler:say(message) without a focus; fall back
+		-- to the most recently added focus so the say still routes to someone.
+		if focus == nil then
+			focus = self.focuses[#self.focuses]
+		end
+
+		if focus == nil then
+			-- No focus at all — emit as ambient NPC talk so the call is still safe.
+			selfSay(message, nil, publicize and true or false)
+			return
+		end
+
 		if self.eventDelayedSay[focus] then
 			self:cancelNPCTalk(self.eventDelayedSay[focus])
 		end
