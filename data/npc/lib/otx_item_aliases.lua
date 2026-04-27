@@ -577,3 +577,10 @@ Cffrozenstarlight = 2361
 Cfminotaurtrophy = 7401
 Cfgoldenmug = 2033
 Cfsmalloillamp = 2062
+
+-- Etapa H polish — fillers for OTX scripts that referenced post-7.72 names.
+-- Items that don't exist in 7.72 fall back to the closest 7.72 equivalent.
+Cforcishaxe = 2428         -- real 7.72 item
+Cfobsidianmace = 2425      -- H.L. NPC said 'obsidian lance' but typed Cfobsidianmace
+Cfceremonialankh = 2193    -- 'ceremonial ankh' is post-7.72; fall back to plain ankh
+Cfstuffeddragon = 2355     -- 'stuffed dragon' is post-7.72; fall back to stuffed rabbit
