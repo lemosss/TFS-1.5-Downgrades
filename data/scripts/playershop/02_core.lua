@@ -3,12 +3,24 @@
 -- All transactions are synchronous (no addEvent / yield).
 -- ===========================================================================
 
--- Sanitize the shop text (no control chars, max length).
+-- Sanitize the shop text + wrap em 2 linhas pra caber no title acima da
+-- cabeca do char. Max 22 chars por linha, total 44. O \n eh interpretado
+-- pelo Creature:setTitle no client (CachedText do OTC v8 quebra naturalmente
+-- em \n).
+local SHOP_TEXT_LINE_LEN = 22
 local function sanitizeText(text)
     if type(text) ~= 'string' then return "" end
     text = text:gsub("[%c]", "")
     if #text > PlayerShopConfig.maxShopTextLength then
         text = text:sub(1, PlayerShopConfig.maxShopTextLength)
+    end
+    if #text > SHOP_TEXT_LINE_LEN then
+        -- Tenta quebrar num espaco perto do limite (pra nao cortar palavra
+        -- no meio); se nao houver espaco proximo, corta hard em 22.
+        local breakAt = SHOP_TEXT_LINE_LEN
+        local space = text:sub(1, SHOP_TEXT_LINE_LEN + 1):find(" [^ ]*$")
+        if space and space > 1 then breakAt = space - 1 end
+        text = text:sub(1, breakAt) .. "\n" .. text:sub(breakAt + 1):gsub("^ +", "")
     end
     return text
 end

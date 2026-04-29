@@ -1377,38 +1377,31 @@ server sends the new skull) loads `shop_icon.png` instead of leaving it blank.
 
 ### Outstanding (not blockers, future polish)
 
-- **Persistent shop label above the seller's head** (the "balãozinho").
-  The user wants the shop text to float fixed over the character, the
-  same way the PK skull stays glued — no fade, no chat-history pollution.
-  The OTC v8 already supports this pattern via `StaticText.create()` +
-  `g_map.addThing(staticText, pos, -1)`, used by `console.lua` for
-  speak bubbles, but those StaticText widgets have a built-in C++ decay
-  timer (about 5s) and don't track the creature's position when she
-  walks. To make it truly native — drawn by the engine like the name
-  + skull do — we'd need:
-  1. Server source patch in `ProtocolGame::AddCreature` to append a
-     `string shopText` field to the creature packet (one new byte
-     header signaling the field's presence, then length-prefixed UTF-8).
-  2. Server source patch in `Game::updateCreatureShopText(creature)`
-     analogous to `updateCreatureSkull` so transitions push live.
-  3. **Client-side OTC v8 source patch** — currently the biggest
-     blocker. The repo at `Desktop/otclientv80` is the prebuilt 3.2
-     rev 4 release distribution; no `src/` is present. To touch the
-     C++ Creature renderer (which draws the name string above the
-     creature in `creature.cpp` `drawInformation`) we'd have to clone
-     `OTCv8/otclientv8` (or the `OTCv8/otcv8-dev` branch the user has
-     in `Desktop/OT/otcv8-dev`), apply a similar `drawShopText` pass,
-     and rebuild — non-trivial without proven build environment for
-     this fork.
+- **Persistent shop label above the seller's head** (the "balãozinho")
+  — **RESOLVIDO sem rebuild do client**. Plot twist: o OTC v8 release
+  pré-buildado em `Desktop/otclientv80/otclient_gl.exe` JÁ tem as
+  funções `Creature:setTitle(text, font, color)` / `Creature:clearTitle()`
+  expostas pro Lua (confirmado via `grep -ao` no binário). Isso usa
+  o sistema interno de "title" do OTC, que renderiza um texto colado
+  acima do nome (em `creature.cpp drawInformation`, junto ao
+  `m_titleCache`) e segue a creature naturalmente quando ela se move,
+  sem decay nem chat-pollution.
 
-  **Lua-only fallback** that still hits the screen but with caveats:
-  in `playershop.lua onStateBroadcast(isOpen=1)` build a `StaticText`,
-  drop it on the creature's tile, and refresh it every ~3 seconds via
-  `cycleEvent` until the shop closes. Not "fixed" — the text reappears
-  each cycle, follows the creature poorly, and pollutes the chat tab
-  if the message goes through the speak system. We discussed this and
-  the user explicitly preferred the native route; deferring until the
-  client source-patch path is worth the effort.
+  Implementação: em `playershop.lua onStateBroadcast(isOpen=1)`,
+  chama `creature:setTitle(text, 'verdana-11px-rounded', '#FFD700')`
+  com a mensagem da loja em dourado. Em `isOpen=0`, chama
+  `creature:clearTitle()`. Hook adicional em `connect(Creature,
+  onAppear, ...)` re-aplica o title quando a creature reaparece no
+  campo de visão (pq o title é state local do client e some quando
+  a creature é destruída/recriada por sair/entrar do spec range).
+
+  Caveat: a função ficou disponível "por sorte" — esse OTC v8 build é
+  fork do release 3.2 rev 4 (Feb 2023, commit `aacfe3f`) e os autores
+  já tinham incluído `setTitle` no Lua bindings (`luafunctions_client.cpp`
+  line 552-554). Outros forks/builds podem não ter. O `pcall`
+  envolvendo as chamadas mantém compatibilidade — se a função não
+  existir, simplesmente não desenha o title (ícone via skull continua
+  funcionando standalone).
 
 - **Lista vazia sem filtro**: this was a real issue earlier in the
   session. Two stacked bugs caused it (see commit
