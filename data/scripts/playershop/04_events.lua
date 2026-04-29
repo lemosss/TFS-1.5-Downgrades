@@ -12,39 +12,31 @@ login:onLogin(function(player)
 end)
 login:register()
 
--- ---- onLogout: refuse if selling ----
+-- ---- onLogout: auto-close shop if seller logs out ----
 local logout = CreatureEvent("PlayerShopLogout")
 logout:type("logout")
 logout:onLogout(function(player)
     if PlayerShop_IsSelling(player:getId()) then
-        player:sendCancelMessage("Voce nao pode deslogar com a loja aberta. Feche-a primeiro (use !fecharloja).")
-        return false
+        PlayerShop_Close(player:getId(), "Loja fechada (logout).")
     end
-    return true
+    return true  -- allow logout
 end)
 logout:register()
 
--- ---- onMoveItem: prevent moving items that are in a shop slot ----
--- Use EventCallback (chained, multi-listener safe).
+-- Block ALL item movement while a shop is open: drops, inventory swaps,
+-- depot transfers, anything. Simpler than tracking shop-item UIDs (which were
+-- unreliable when getUniqueId()==0 for normal items).
 local ec = EventCallback
 ec.onMoveItem = function(self, item, count, fromPos, toPos, fromCylinder, toCylinder)
-    if not self then return true end
-    local shop = ActiveShops[self:getId()]
-    if not shop then return true end
-    local uid = item:getUniqueId()
-    for _, e in pairs(shop.items) do
-        if e.itemUid == uid then
-            self:sendCancelMessage("Este item esta em sua loja. Feche a loja para movimenta-lo.")
-            return false
-        end
+    if self and ActiveShops[self:getId()] then
+        self:sendCancelMessage("Voce nao pode mover itens com a loja aberta.")
+        return false
     end
     return true
 end
 ec:register()
 
 -- ---- tick: warp seller back if pushed; close shop if seller leaves PZ ----
-local lastPos = {}
-
 local tick = GlobalEvent("PlayerShopTick")
 -- "think" is the default; setting type() with "think" errors -- just set interval + onThink.
 tick:interval(500)
@@ -53,21 +45,20 @@ tick:onThink(function()
         local seller = Player(sellerId)
         if seller then
             local cur = seller:getPosition()
-            local saved = lastPos[sellerId]
-            if not saved then
-                lastPos[sellerId] = cur
-            elseif cur.x ~= saved.x or cur.y ~= saved.y or cur.z ~= saved.z then
-                if PlayerShop_TileIsPZ(saved) then
-                    seller:teleportTo(saved, false)
+            -- Anchor position lives on the shop entry, so it's cleared automatically
+            -- when the shop closes (no more leftover lastPos entries).
+            if not shop.anchorPos then
+                shop.anchorPos = cur
+            elseif cur.x ~= shop.anchorPos.x or cur.y ~= shop.anchorPos.y or cur.z ~= shop.anchorPos.z then
+                if PlayerShop_TileIsPZ(shop.anchorPos) then
+                    seller:teleportTo(shop.anchorPos, false)
                 else
                     PlayerShop_Close(sellerId, "Loja fechada (saiu da zona protegida).")
-                    lastPos[sellerId] = nil
                 end
             end
             if seller.resetIdleTime then seller:resetIdleTime() end
         else
             PlayerShop_Close(sellerId, "Vendedor offline.")
-            lastPos[sellerId] = nil
         end
     end
     -- expiration
@@ -75,9 +66,35 @@ tick:onThink(function()
     for sellerId, shop in pairs(ActiveShops) do
         if now - shop.startTime >= PlayerShopConfig.maxShopDuration then
             PlayerShop_Close(sellerId, "Tempo limite da loja atingido (8h).")
-            lastPos[sellerId] = nil
+        end
+    end
+    -- Buyer left PZ -> force-close their shop view.
+    for buyerId, sellerId in pairs(OpenShopWindows) do
+        local buyer = Player(buyerId)
+        if not buyer then
+            OpenShopWindows[buyerId] = nil
+        elseif not PlayerShop_TileIsPZ(buyer:getPosition()) then
+            PlayerShop_Reject(buyer, "Voce saiu da zona protegida. Loja fechada.")
+            OpenShopWindows[buyerId] = nil
         end
     end
     return true
 end)
 tick:register()
+
+-- ---- bubble re-broadcast: STATE every 3s ensures any client (incl. ones
+-- ----  that just came into spec range) has the seller in sellingCreatures
+-- ----  so the bubble widget renders for them too. Cheap server side, the
+-- ----  bubble itself is a persistent UIWidget on each client.
+local stateTick = GlobalEvent("PlayerShopStateTick")
+stateTick:interval(3000)
+stateTick:onThink(function()
+    for sellerId, shop in pairs(ActiveShops) do
+        local seller = Player(sellerId)
+        if seller and shop.text and shop.text ~= "" then
+            PlayerShop_BroadcastState(seller, true)
+        end
+    end
+    return true
+end)
+stateTick:register()

@@ -635,3 +635,264 @@ DB realera15, account 1, password 'lemos', type 6 (GOD), premium until 2036
 Both MS Lemos and ED Lemos were created mid-session at user request, magic
 level 40, in the Thais temple ("MS e ED na minha conta level 100 ai ... no
 tmeplo de thais").
+
+---
+
+## 12. Day-5 work — Player Shop (Priston Tale style)
+
+Added a full player-shop system under `data/scripts/playershop/` (server, revscripts)
+and `C:/Users/Lemos/Desktop/otclientv80/modules/game_playershop/` (client). 
+Right-click your own char → "Open Shop" (creates own shop). Right-click another
+player who's selling → "Open Shop" (buy from them).
+
+### Server-side: `data/scripts/playershop/`
+
+| File | Role |
+|------|------|
+| `01_config.lua` | shared config (`PlayerShopConfig`), opcode IDs (130-138), packing helpers (`PlayerShop_PackU8/U16/U32/Str`), `PlayerShop_SendOpcode`, `PlayerShop_Reject` |
+| `02_core.lua` | `PlayerShop_Open` / `PlayerShop_Close` / `PlayerShop_Buy` (synchronous w/ rollback), `PlayerShop_BroadcastState`, `PlayerShop_SendShopDataTo`, `PlayerShop_SendInventoryList` |
+| `03_opcodes.lua` | Reader for buffer parsing; `PlayerShop_DispatchOpcode`; `CreatureEvent("PlayerShopExtOp")` (type=extendedopcode) |
+| `04_events.lua` | login chain (registers `PlayerShopExtOp` + `PlayerShopLogout`), logout closes shop (no longer blocks), `EventCallback.onMoveItem` blocks ALL item movement while selling, GlobalEvent tick (500ms) warps seller back if displaced + 8h timeout, GlobalEvent sayTick (10s) makes seller `say(text, TALKTYPE_SAY)` so the title floats overhead |
+| `05_talkactions.lua` | `!fecharloja`, `!lojas`, `/shop list`, `/shop close <name>` |
+| `06_save_hook.lua` | `GlobalEvent("shutdown")` closes all shops; VIP login sync stub (Player:getVipList not exposed in this build, so commented out) |
+| `README.md` | install + opcode table + design notes |
+
+### Client-side: `otclientv80/modules/game_playershop/`
+
+| File | Role |
+|------|------|
+| `playershop.otmod` | manifest (filename had to be `playershop.otmod` not `game_playershop.otmod` — otclientv80 convention is `<short>.otmod`) |
+| `playershop.otui` | `ShopBubble` (unused now), `CreateShopWindow`, `ShopViewWindow`, `ShopSlot` styles; **NO `//` comments** (OTUI doesn't accept them, breaks parser) |
+| `playershop.lua` | opcode registration, `iAmSelling` flag, drawInformation hook (icon next to name), VIP color/icon hook, click intercept |
+| `create_shop.lua` | "Criar Loja" window logic: 20 slots, item picker, price validation, `commitCreateShop` |
+| `shop_view.lua` | buyer view: lists items + qty + buy buttons |
+
+### ExtendedOpcodes (130-138)
+
+All payloads are packed into a SINGLE string sent via `addString` — multiple
+`addByte`/`addU32` calls after the opcode byte corrupt the OTClient extended-opcode
+parser's framing (it expects exactly one length-prefixed string after the opcode).
+The bug manifested as truncated text ("ta loja" instead of "Esta loja") because
+the client's `readStr(buffer, 1)` read 2 bytes as length INSIDE the actual string.
+
+| ID | Name | Direction | Payload |
+|----|------|-----------|---------|
+| 130 | OPEN | C→S | text(str), n(u8), [uid(u32) id(u16) count(u16) price(u32)]×n |
+| 131 | CLOSE | C→S | (vazio) |
+| 132 | REQUEST | C→S | sellerCid(u32) |
+| 133 | BUY | C→S | sellerCid(u32) slot(u8) qty(u16) |
+| 134 | DATA | S→C | sellerId(u32) name(str) text(str) n(u8) [slot(u8) id(u16) count(u16) price(u32) charges(u16) name(str)]×n |
+| 135 | STATE_BROADCAST | S→C | cid(u32) isOpen(u8) text(str if open) |
+| 136 | VIP_STATUS | S→C | guid(u32) name(str) isOpen(u8) |
+| 137 | INVENTORY_LIST | S↔C | (request: vazio; response: n(u16) [uid(u32) id(u16) count(u16) charges(u16) name(str)]×n) |
+| 138 | REJECT | S→C | reason(str) |
+
+### Movement / chat lock layers (4 layers — overengineered? maybe)
+
+Took several iterations because each "fix" had a corner case. Final stack:
+
+| Layer | Where | What it blocks |
+|-------|-------|----------------|
+| 1. `walking.lua walk()` early-return | client | WASD / direction keys (no input sent to server) |
+| 2. `walking.lua turn()` early-return | client | Ctrl + arrows turning |
+| 3. `gameinterface.lua autoWalk` early-return | client | click-to-walk |
+| 4. `Player:onTurn` returns false | server | hacked-client safety net for turning |
+| 5. 500ms tick `teleportTo(anchor)` | server | hacked-client safety net for movement |
+| 6. `console.lua sendCurrentMessage` filter | client | non-`!`/`/` chat (commands like `!fecharloja` still pass) |
+
+**Paralyze condition was tried** to freeze on server side, but it caused the
+"buyer walks onto same SQM as seller" bug (apparently Tibia treats paralyzed
+creatures differently for tile-blocking). Removed; layer-1/2/3 client-side
+blocks + onTurn + warp-back tick are sufficient.
+
+**`changeSpeed(-currentSpeed)` was tried** even before paralyze. Same
+non-blocking-tile bug. Don't use.
+
+**Auto-close on logout, walk anchor lives ON THE SHOP ENTRY** (`shop.anchorPos`),
+not in a parallel table. So when the shop closes, the anchor disappears
+automatically — fixes "open shop somewhere else, get teleported to old spot"
+bug.
+
+### Bubble (overhead text)
+
+Initial attempt: custom `ShopBubble` widget on the map panel using
+`mapPanel:getCreaturePosition(creature)` — that method **doesn't exist** in
+otclientv80. Scrapped.
+
+Current: server makes the seller `Creature:say(shop.text, TALKTYPE_SAY)` every
+10 seconds. The engine renders a yellow bubble natively (visible to all nearby
+players, fades in a few seconds, repeats). Tried `TALKTYPE_MONSTER_SAY` (red
+bubble) — user didn't like the colour. Tried suppressing the chat-log entry
+via a `console.lua` patch in `onTalk` that matches `name + message` against
+`modules.game_playershop.sellingCreatures` and skips the log entry — works
+but means we still have spam in the engine's log on the seller's side
+(cosmetic only on the buyer-side chat tabs).
+
+### Right-click menu (the great separator saga)
+
+Goal: "Open Shop" entry visible only when:
+- Right-clicking own char (opens create-shop window)
+- Right-clicking another player who's currently selling (opens buyer view)
+
+Iterated through several approaches because of the otclientv80 menu hook API:
+
+1. Single category `playershop` with one option — got 1 separator. User wanted 2.
+2. Two categories `_create` + `_view` — got 2 separators (one per category, even
+   the empty one), but order was random per `pairs()` so "Open Shop" sometimes
+   appeared between two separators (good) and sometimes after both (bad).
+3. Patched `gameinterface.lua` to iterate `hookedMenuOptions` in **sorted-key
+   order** so the placement is deterministic. Categories `playershop_a_create`
+   (own char) and `playershop_b_view` (selling other) — `_a_` always renders
+   first, `_b_` second.
+4. Tried adding 2 trailing separators below "Open Shop" via custom logic — user
+   said it looked weird (3 separators total), reverted.
+
+Final: 2 categories + sorted iteration in gameinterface.lua. Result: 2 separators
+appear consistently around the "Open Shop" option.
+
+### Other UX fixes that piled up
+- **Coin click-to-walk on selling tile**: drop `paralyze` (was making seller
+  non-blocking).
+- **Shop-title required**: client validation (in `commitCreateShop`) +
+  server validation (in `PlayerShop_Open`).
+- **`getTradeState()` doesn't exist** in this build — removed the trade-state
+  check from `canOpenShop`.
+- **`getVipList()` doesn't exist** either — VIP gold-colour hook stays
+  registered but does nothing (only nearby `STATE_BROADCAST` paints the icon).
+- **`CONST_SLOT_FIRST/LAST` are nil** in this build — replaced with literals
+  `1, 10` in `findItemInInventory` and `PlayerShop_SendInventoryList`.
+- **Coin worth attributes** (already in §7b but bears repeating): without
+  `<attribute key="worth">` on coins, `Player::getMoney()` returned 0 and the
+  trade window greyed out everything. Set 1/100/10000 on gold/plat/crystal.
+- **Stackable rune drop only drops 1**: this is a TFS 1.5 / 8.0 protocol
+  default — drag asks "How much?" via the count window. NOT a player-shop bug.
+  User declined the suggested fix in `gameinterface.lua moveStackableItem`
+  (default = drop all without dialog) — kept original behaviour.
+- **Hailstorm Fury mount typo** — early-day fix, completely unrelated to player
+  shop. Mount id=55 was named `"Hailtorm Fury"` (missing `s`) inherited from
+  global 8.0's mounts.xml when it overwrote Nekiro's correct version. One-line
+  fix in `data/XML/mounts.xml`. (commit `0ad745d3`)
+
+### Files modified outside the playershop module
+- `otclientv80/modules/game_walking/walking.lua` — `walk()` and `turn()` early-return
+- `otclientv80/modules/game_interface/gameinterface.lua` — sorted-key hook iteration; autoWalk early-return; **note**: `useThing:isItem()` check in the GameBot ID-display block means the "ID: 409" line only appears for items, not creature right-clicks
+- `otclientv80/modules/game_console/console.lua` — `sendCurrentMessage` filter for non-`!`/`/` while selling; `onTalk` filter to skip shop-bubble messages from chat log
+- `otclientv80/modules/game_interface/interface.otmod` — added `game_playershop` to the `load-later` list so it loads when game_interface init's
+- `Realera TFS 1.5/data/events/scripts/player.lua` — `Player:onTurn` blocks Ctrl+arrows while selling
+
+### Message colours (final)
+- "Loja aberta. Voce nao pode se mover ate fechar." → `MESSAGE_INFO_DESCR` (green via the existing 7c client patch)
+- "Loja fechada." (and variants on close) → `MESSAGE_INFO_DESCR` (green)
+- "Voce ja tem uma loja aberta." → `MESSAGE_INFO_DESCR` (green, informational)
+- All blocking messages ("Esta loja nao esta mais disponivel.", "Voce nao pode mover itens com a loja aberta.", chat-blocked, etc.) → `MESSAGE_STATUS_WARNING` server-side, `displayFailureMessage()` client-side. Renders white at the bottom of the screen — user said "deixa como esta agora, branco lá embaixo".
+
+### Open issues / not implemented
+- Custom-styled overhead bubble (the "Lojinha do Gordo" white-bubble look from the user's reference image) — would require either an engine patch to render `TALKTYPE_PRIVATE_NP` differently or a custom client-side widget that converts game-position → screen-pixel. Skipped because `mapPanel:getCreaturePosition` doesn't exist in otclientv80 and the engineer time-budget was rough.
+- `getVipList()` — would need either a Lua binding added to TFS source (small C++ change) or query the DB directly from a globalevent. Skipped.
+- Shift+drag = drop entire stack — confirmed user prefers the original Tibia behaviour with the count dialog.
+
+### Files for reference
+- `data/scripts/playershop/README.md` — install + opcode table
+- `data/scripts/playershop/06_save_hook.lua` — also has the `PlayerShop_CloseAll(reason)` global helper that the existing `data/globalevents/scripts/serversave.lua` can call directly if you want shop-close-on-save.
+
+### Day-5b polish (still same day, after long iteration)
+
+**Bubble: settled on a custom `ShopBubble` UIWidget** (in playershop.otui — white pill,
+`#f1f1f1` bg + `#4a4a4a` border + `#1a1a1a` text). Created on STATE_BROADCAST(open=1)
+as a child of the game map panel. Position synced every 50ms via
+`creature:getInformationPosition()` (a Creature method exposed in the otclientv80
+binary even though it's not surfaced in any module; works fine from Lua).
+Persistent — does not fade. Server re-broadcasts STATE every 3s so newly-arrived
+nearby clients also get the bubble.
+
+**Tried and discarded**:
+- `Creature:say(text, TALKTYPE_SAY)` — yellow bubble + chat-log spam.
+  Console.lua filter to skip the chat-log entry worked, but only when the local
+  client already had `sellingCreatures` populated; new arrivals saw the spam.
+- `Creature:say(text, TALKTYPE_MONSTER_SAY)` — red bubble. User vetoed colour.
+- Engine `StaticText` (`StaticText.create()` + `g_map.addThing(st, pos, -1)`) — fades
+  in ~5s. Tried refreshing every 3s but user wanted "static, no refresh".
+
+**`Creature:getInformationPosition()`** — undocumented but present in the
+otclientv80 GL/DX binary. Returns the screen pixel where info (name, HP) is drawn.
+Subtract widget height + 18px to place a bubble above the name.
+
+**OTUI hex colours must be 6-digit.** `#444` and `#ddd` (3-digit) throw
+`failed to cast node value '#444' to type 'class Color'` and the entire style
+fails to load. Use `#444444`, `#dddddd`. Cost an evening of confused debugging.
+
+### `iAmSelling` truth model (final)
+- Client side flag, set/cleared by server's STATE_BROADCAST handler ONLY.
+- Optimistically set to `true` on `commitCreateShop` (right after sending OPCODE_OPEN)
+  so the user can't dash off in the 50-100ms before the server's STATE_BROADCAST
+  comes back.
+- Reset to `false` in `onGameStart` and `onGameEnd` to handle re-login on a
+  cached client.
+- **NOT reset in `onReject`.** Server's `PlayerShop_Reject` always sends a
+  STATE_BROADCAST with the player's TRUE selling state immediately after the
+  REJECT opcode. So the client's authoritative source for the flag is exclusively
+  STATE_BROADCAST. This fixes the "user has shop active, opens window again,
+  server rejects, client briefly thinks not-selling, walks for 2s" bug.
+
+### Right-click menu — final form
+- Two registered hooks (`playershop_a_create` for self → opens create window;
+  `playershop_b_view` for other selling player → opens buy window).
+- `gameinterface.lua` patched in TWO places: (1) iterate `hookedMenuOptions` in
+  sorted-key order so layout is deterministic; (2) only add the per-category
+  separator if at least one option's condition matches (so empty categories
+  don't produce ghost separators on right-click of plain ground).
+- Result: 2 separators visible only when the menu actually contains the Open
+  Shop entry; 0 separators on ground/empty right-click.
+
+### Movement / chat lock — final layers (paralyze removed)
+1. **client `walking.lua walk()`** early-return if `iAmSelling` — drops WASD.
+2. **client `walking.lua turn()`** early-return if `iAmSelling` — drops Ctrl+arrows.
+3. **client `gameinterface.lua autoWalk`** early-return if `iAmSelling` — drops click-to-walk.
+4. **server `Player:onTurn`** returns `false` if shop active — safety net for hacked client.
+5. **server 500ms tick `teleportTo(shop.anchorPos)`** — safety net for hacked client.
+6. **client `console.lua sendCurrentMessage`** allowlist: only `!fecharloja`,
+   `!lojas`, `/shop`, `/shop *` pass; everything else shows red failure msg.
+7. **server `EventCallback.onMoveItem`** returns `false` for ALL item moves while
+   selling (no per-item UID matching — those break with non-unique items).
+
+`shop.anchorPos` lives on the shop entry, not in a parallel table. Closes shop
+→ entry deleted → anchorPos automatically gone. Fixes "close shop, open new one
+1+ tile away, get teleported to old spot".
+
+### Buyer-side PZ enforcement
+- Buyer outside PZ tries to right-click "Open Shop" → server `PlayerShop_SendShopDataTo`
+  rejects with red "Voce precisa estar em zona protegida para ver lojas."
+- Buyer with view window open walks out of PZ → 500ms tick detects, sends
+  REJECT + clears `OpenShopWindows[buyerId]`. Client's `onReject` calls (in
+  pcall, three redundant paths because sandbox cross-script globals are
+  inconsistent in OTCv8) `shop_view_close()`, `viewWindow:destroy()`, and
+  `modules.game_playershop.viewWindow`. The view UI closes immediately.
+
+### Message colour conventions (final)
+- Server-side green (`MESSAGE_INFO_DESCR` → centerGreen via the existing
+  client patch from §7c):
+  - "Loja aberta. Voce nao pode se mover ate fechar."
+  - "Loja fechada." / "Loja fechada (logout)." etc.
+- Server-side red (via `PlayerShop_Reject` → REJECT opcode →
+  `displayBroadcastMessage` → centerRed via `MessageModes.Warning`):
+  - "Voce ja tem uma loja aberta."
+  - "Voce precisa colocar um titulo na loja."
+  - "Preco invalido no slot N."
+  - "Loja vazia. Adicione pelo menos um item."
+  - "Esta loja nao esta mais ativa."
+  - "Voce precisa estar em zona protegida para ver lojas."
+  - "Voce saiu da zona protegida. Loja fechada."
+- Whitelist failure (client-side, status-small white): "Voce so pode digitar
+  !fecharloja enquanto a loja esta aberta."
+
+### Other small polish
+- Top-bar "Criar Loja" button removed — both shop creation AND view are via the
+  right-click menu only.
+- ESC binds to close the Create-Shop window (`g_keyboard.bindKeyPress('Escape',
+  closeCreateShop, createWindow)`).
+- `onGameEnd` clears `lastSavedText`, `lastSavedSlots`, `inventoryList`, and
+  destroys the create window so the next character on the same client doesn't
+  see the previous one's draft.
+- `iAmSelling` reset on both `onGameStart` and `onGameEnd` (paranoid defensive).
+- Hailstorm Fury mount typo fix from earlier in the day shipped in commit
+  `0ad745d3` — completely unrelated to player shop, just happened in same day.

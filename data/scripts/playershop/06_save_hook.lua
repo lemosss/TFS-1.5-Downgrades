@@ -26,33 +26,10 @@ end
 local vipLogin = CreatureEvent("PlayerShopVipSync")
 vipLogin:type("login")
 vipLogin:onLogin(function(player)
-    local pid = player:getId()
-    addEvent(function()
-        local p = Player(pid)
-        if not p then return end
-        for sellerId, _ in pairs(ActiveShops) do
-            local seller = Player(sellerId)
-            if seller and seller:getId() ~= pid then
-                local sellerGuid = seller:getGuid()
-                local vips = p:getVipList()
-                if vips then
-                    for _, v in ipairs(vips) do
-                        if v == sellerGuid then
-                            local msg = NetworkMessage()
-                            msg:addByte(0x32)
-                            msg:addByte(PlayerShopOpcode.VIP_STATUS)
-                            msg:addU32(sellerGuid)
-                            msg:addString(seller:getName())
-                            msg:addByte(1)
-                            msg:sendToPlayer(p)
-                            msg:delete()
-                            break
-                        end
-                    end
-                end
-            end
-        end
-    end, 1500)
+    -- Player:getVipList() not exposed in this TFS 1.5 / 8.0 build; skip VIP sync.
+    -- (VIP sellers can still get the gold colour live via STATE_BROADCAST when
+    -- they enter the seller's screen range -- handled in PlayerShop_NotifyVipWatchers
+    -- if/when getVipList becomes available.)
     return true
 end)
 vipLogin:register()

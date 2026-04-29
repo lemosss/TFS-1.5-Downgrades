@@ -29,9 +29,7 @@ local function canOpenShop(player)
     if skull == SKULL_RED or skull == SKULL_BLACK then
         return false, "Skull red/black nao pode abrir loja."
     end
-    if player:getTradeState() ~= 0 then  -- 0 = TRADE_NONE
-        return false, "Voce esta em trade. Cancele primeiro."
-    end
+    -- (getTradeState() not available in this TFS build; trade lock skipped)
     return true
 end
 
@@ -45,7 +43,7 @@ local function findItemInInventory(player, itemUid, itemId)
         end
     end
     -- fallback: walk inventory looking for first matching id (for stackables)
-    for slot = CONST_SLOT_FIRST, CONST_SLOT_LAST do
+    for slot = 1, 10 do
         local inv = player:getSlotItem(slot)
         if inv then
             if inv:getId() == itemId then return inv end
@@ -65,6 +63,10 @@ end
 -- payload.text     = string
 -- ---------------------------------------------------------------------------
 function PlayerShop_Open(player, payload)
+    if PlayerShop_IsSelling(player:getId()) then
+        PlayerShop_Reject(player, "Voce ja tem uma loja aberta.")
+        return false
+    end
     local ok, why = canOpenShop(player)
     if not ok then
         PlayerShop_Reject(player, why)
@@ -112,9 +114,19 @@ function PlayerShop_Open(player, payload)
         return false
     end
 
+    local cleanText = sanitizeText(payload.text)
+    if cleanText:gsub("%s+", "") == "" then
+        PlayerShop_Reject(player, "Voce precisa colocar um titulo na loja.")
+        return false
+    end
+
+    -- Movement is blocked entirely client-side (walk/turn/autoWalk patches in
+    -- otclientv80) plus an onTurn server check and a warp-back tick safety net.
+    -- No server-side paralyze needed.
+
     ActiveShops[player:getId()] = {
         items     = items,
-        text      = sanitizeText(payload.text),
+        text      = cleanText,
         startTime = os.time(),
         sellerName = player:getName(),
     }
@@ -150,14 +162,9 @@ function PlayerShop_Close(playerId, reason)
         if sellerId == playerId then
             local buyer = Player(buyerId)
             if buyer then
-                buyer:sendTextMessage(MESSAGE_INFO_DESCR, "Esta loja nao esta mais disponivel.")
-                local msg = NetworkMessage()
-                msg:addByte(0x32)
-                msg:addByte(PlayerShopOpcode.STATE_BROADCAST)
-                msg:addU32(playerId)
-                msg:addByte(0)  -- 0 = closed
-                msg:sendToPlayer(buyer)
-                msg:delete()
+                buyer:sendTextMessage(MESSAGE_STATUS_WARNING, "Esta loja nao esta mais disponivel.")
+                PlayerShop_SendOpcode(buyer, PlayerShopOpcode.STATE_BROADCAST,
+                    PlayerShop_PackU32(playerId) .. PlayerShop_PackU8(0))
             end
             OpenShopWindows[buyerId] = nil
         end
@@ -170,54 +177,40 @@ end
 function PlayerShop_BroadcastState(seller, isOpen)
     local pos = seller:getPosition()
     local spec = Game.getSpectators(pos, false, true, 7, 7, 5, 5)  -- only players
-    local msg = NetworkMessage()
-    msg:addByte(0x32)
-    msg:addByte(PlayerShopOpcode.STATE_BROADCAST)
-    msg:addU32(seller:getId())
-    msg:addByte(isOpen and 1 or 0)
+    local payload = PlayerShop_PackU32(seller:getId()) .. PlayerShop_PackU8(isOpen and 1 or 0)
     if isOpen then
         local shop = ActiveShops[seller:getId()]
-        msg:addString(shop and shop.text or "")
+        payload = payload .. PlayerShop_PackStr(shop and shop.text or "")
     end
+    -- Always send to the seller themselves so their client locks chat/walk.
+    PlayerShop_SendOpcode(seller, PlayerShopOpcode.STATE_BROADCAST, payload)
     for _, p in ipairs(spec) do
-        msg:sendToPlayer(p)
+        if p:getId() ~= seller:getId() then
+            PlayerShop_SendOpcode(p, PlayerShopOpcode.STATE_BROADCAST, payload)
+        end
     end
-    msg:delete()
 end
 
 -- ---------------------------------------------------------------------------
 -- VIP watchers: every player who has this seller on VIP gets an opcode update.
 -- ---------------------------------------------------------------------------
 function PlayerShop_NotifyVipWatchers(seller, isOpen)
-    local sellerGuid = seller:getGuid()
-    -- Walk all online players, check each one's VIP list (TFS Player:getVipList)
-    local sellerName = seller:getName()
-    for _, p in ipairs(Game.getPlayers()) do
-        if p:getId() ~= seller:getId() then
-            local vips = p:getVipList()
-            if vips then
-                for _, entry in ipairs(vips) do
-                    if entry == sellerGuid then
-                        local msg = NetworkMessage()
-                        msg:addByte(0x32)
-                        msg:addByte(PlayerShopOpcode.VIP_STATUS)
-                        msg:addU32(sellerGuid)
-                        msg:addString(sellerName)
-                        msg:addByte(isOpen and 1 or 0)
-                        msg:sendToPlayer(p)
-                        msg:delete()
-                        break
-                    end
-                end
-            end
-        end
-    end
+    -- Player:getVipList() not available in this TFS 1.5 / 8.0 build.
+    -- Falling back to the per-screen STATE_BROADCAST (already fired in
+    -- PlayerShop_BroadcastState) so anyone NEAR the seller still gets
+    -- bubble + icon. VIP sync from any distance is gated until
+    -- getVipList is available or we read directly from the DB.
 end
 
 -- ---------------------------------------------------------------------------
 -- Send full shop data to a buyer (after they REQUEST).
 -- ---------------------------------------------------------------------------
 function PlayerShop_SendShopDataTo(buyer, sellerId)
+    -- Buyer must be inside a protection zone to OPEN a shop window.
+    if not PlayerShop_TileIsPZ(buyer:getPosition()) then
+        PlayerShop_Reject(buyer, "Voce precisa estar em zona protegida para ver lojas.")
+        return false
+    end
     local shop = ActiveShops[sellerId]
     if not shop then
         PlayerShop_Reject(buyer, "Esta loja nao esta mais ativa.")
@@ -232,27 +225,23 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
 
     OpenShopWindows[buyer:getId()] = sellerId
 
-    local msg = NetworkMessage()
-    msg:addByte(0x32)
-    msg:addByte(PlayerShopOpcode.DATA)
-    msg:addU32(sellerId)
-    msg:addString(seller:getName())
-    msg:addString(shop.text or "")
-    -- count of items in shop
+    local payload = PlayerShop_PackU32(sellerId)
+                 .. PlayerShop_PackStr(seller:getName())
+                 .. PlayerShop_PackStr(shop.text or "")
     local n = 0
     for _ in pairs(shop.items) do n = n + 1 end
-    msg:addByte(n)
+    payload = payload .. PlayerShop_PackU8(n)
     for slot, entry in pairs(shop.items) do
-        msg:addByte(slot)
-        msg:addU16(entry.itemId)
-        msg:addU16(entry.count)
-        msg:addU32(entry.price)
-        msg:addU16(entry.charges or 0)
         local it = ItemType(entry.itemId)
-        msg:addString(it:getName() or "item")
+        payload = payload
+               .. PlayerShop_PackU8(slot)
+               .. PlayerShop_PackU16(entry.itemId)
+               .. PlayerShop_PackU16(entry.count)
+               .. PlayerShop_PackU32(entry.price)
+               .. PlayerShop_PackU16(entry.charges or 0)
+               .. PlayerShop_PackStr(it:getName() or "item")
     end
-    msg:sendToPlayer(buyer)
-    msg:delete()
+    PlayerShop_SendOpcode(buyer, PlayerShopOpcode.DATA, payload)
     return true
 end
 
@@ -418,21 +407,19 @@ function PlayerShop_SendInventoryList(player)
         end
     end
 
-    for slot = CONST_SLOT_FIRST, CONST_SLOT_LAST do
+    -- inventory slots 1..10 (head, neck, backpack, body, right, left, legs, feet, ring, ammo)
+    for slot = 1, 10 do
         visit(player:getSlotItem(slot))
     end
 
-    local msg = NetworkMessage()
-    msg:addByte(0x32)
-    msg:addByte(PlayerShopOpcode.INVENTORY_LIST)
-    msg:addU16(#items)
+    local payload = PlayerShop_PackU16(#items)
     for _, e in ipairs(items) do
-        msg:addU32(e.uid)
-        msg:addU16(e.id)
-        msg:addU16(e.count)
-        msg:addU16(e.charges)
-        msg:addString(e.name)
+        payload = payload
+               .. PlayerShop_PackU32(e.uid)
+               .. PlayerShop_PackU16(e.id)
+               .. PlayerShop_PackU16(e.count)
+               .. PlayerShop_PackU16(e.charges)
+               .. PlayerShop_PackStr(e.name)
     end
-    msg:sendToPlayer(player)
-    msg:delete()
+    PlayerShop_SendOpcode(player, PlayerShopOpcode.INVENTORY_LIST, payload)
 end

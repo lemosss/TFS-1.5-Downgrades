@@ -36,16 +36,48 @@ ActiveShops      = ActiveShops      or {}  -- [sellerId] = {items, text, startTi
 OpenShopWindows  = OpenShopWindows  or {}  -- [buyerId]  = sellerId
 LastShopRequest  = LastShopRequest  or {}  -- [buyerId]  = ms timestamp of last REQUEST
 
--- ---- helpers exposed globally ----
-function PlayerShop_Reject(player, reason)
+-- ---- byte-packing helpers (network LE) ----
+function PlayerShop_PackU8(n)  return string.char(n % 256) end
+function PlayerShop_PackU16(n) return string.char(n % 256, math.floor(n/256) % 256) end
+function PlayerShop_PackU32(n)
+    return string.char(n % 256,
+                       math.floor(n/256) % 256,
+                       math.floor(n/65536) % 256,
+                       math.floor(n/16777216) % 256)
+end
+function PlayerShop_PackStr(s)
+    s = s or ""
+    return PlayerShop_PackU16(#s) .. s
+end
+
+-- Send an extended opcode with the entire payload packed into a single
+-- addString call. The OTClient parser strips the u16-length framing and
+-- delivers `buffer` to Lua as exactly the bytes packed here. Multiple
+-- addByte/addU32 calls AFTER addByte(opcode) corrupt this framing.
+function PlayerShop_SendOpcode(player, opcode, payload)
     if not player then return end
     local msg = NetworkMessage()
     msg:addByte(0x32)
-    msg:addByte(PlayerShopOpcode.REJECT)
-    msg:addString(reason or "Operacao invalida.")
+    msg:addByte(opcode)
+    msg:addString(payload or "")
     msg:sendToPlayer(player)
     msg:delete()
-    player:sendCancelMessage(reason or "Operacao invalida.")
+end
+
+function PlayerShop_Reject(player, reason)
+    if not player then return end
+    PlayerShop_SendOpcode(player, PlayerShopOpcode.REJECT, reason or "Operacao invalida.")
+    -- After every reject, resync the player's true selling state so the client's
+    -- iAmSelling flag matches reality. (Without this, the client's optimistic
+    -- iAmSelling=true that was set on commitCreateShop gets RESET to false by
+    -- onReject, and a player who already has an active shop briefly walks free.)
+    local payload = PlayerShop_PackU32(player:getId())
+                 .. PlayerShop_PackU8(PlayerShop_IsSelling(player:getId()) and 1 or 0)
+    if PlayerShop_IsSelling(player:getId()) then
+        local shop = ActiveShops[player:getId()]
+        payload = payload .. PlayerShop_PackStr(shop and shop.text or "")
+    end
+    PlayerShop_SendOpcode(player, PlayerShopOpcode.STATE_BROADCAST, payload)
 end
 
 function PlayerShop_IsSelling(playerId)
