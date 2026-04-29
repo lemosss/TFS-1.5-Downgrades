@@ -1677,6 +1677,7 @@ void LuaScriptInterface::registerFunctions()
 	registerEnum(SKULL_GREEN)
 	registerEnum(SKULL_WHITE)
 	registerEnum(SKULL_RED)
+	registerEnum(SHOP_ICON)
 	registerEnum(SKULL_BLACK)
 	registerEnum(SKULL_ORANGE)
 
@@ -2066,6 +2067,7 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("Game", "getSpectators", LuaScriptInterface::luaGameGetSpectators);
 	registerMethod("Game", "getPlayers", LuaScriptInterface::luaGameGetPlayers);
 	registerMethod("Game", "loadMap", LuaScriptInterface::luaGameLoadMap);
+	registerMethod("Game", "updateCreatureSkull", LuaScriptInterface::luaGameUpdateCreatureSkull);
 
 	registerMethod("Game", "getExperienceStage", LuaScriptInterface::luaGameGetExperienceStage);
 	registerMethod("Game", "getExperienceForLevel", LuaScriptInterface::luaGameGetExperienceForLevel);
@@ -4321,6 +4323,24 @@ int LuaScriptInterface::luaGameLoadMap(lua_State* L)
 		}
 	}));
 	return 0;
+}
+
+int LuaScriptInterface::luaGameUpdateCreatureSkull(lua_State* L)
+{
+	// Game.updateCreatureSkull(creature)
+	// Notifies all spectators that this creature's skull has changed.
+	// Used by PlayerShop: after toggling the storage flag (88810), call this
+	// so getSkullClient is re-evaluated and clients receive the new icon
+	// in real time -- without waiting for the creature to leave/re-enter
+	// the spec range.
+	Creature* creature = getCreature(L, 1);
+	if (!creature) {
+		lua_pushnil(L);
+		return 1;
+	}
+	g_game.updateCreatureSkull(creature);
+	pushBoolean(L, true);
+	return 1;
 }
 
 int LuaScriptInterface::luaGameGetExperienceStage(lua_State* L)

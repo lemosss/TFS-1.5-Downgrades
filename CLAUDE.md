@@ -1092,3 +1092,235 @@ Old function kept around in case we revive a depot list popup.
   entry to return precisely. Low priority.
 - **Persistence** — shops still don't survive a server restart (intentional —
   per §10's spec section 6). Reopen manually after save.
+
+---
+
+## 14. Day-7 — Player Shop final polish + native skull icon (SHOP_ICON) + walkthrough lock
+
+Big session. Player Shop reached "ship-ready" state. Major moves: ditched the
+custom STATE_BROADCAST opcode for the seller icon and used the **native skull
+slot of the protocol** instead (instant render via `AddCreature` packet, just
+like PK skull); fixed several depot-related bugs that were dating back since
+Day-5; reworked the create-shop picker into a sprite grid; locked walkthrough
+between players via a focused source patch.
+
+### Source patches (require rebuild)
+
+```
+cmake --build "C:/Users/Lemos/Desktop/Realera TFS 1.5/build" \
+  --config RelWithDebInfo --parallel 8 --target tfs
+```
+
+#### `src/const.h` — new skull id
+Added `SHOP_ICON = 7` to `enum Skulls_t`. Slot 6 (`SKULL_ORANGE`) was already
+defined but never used in any logic — opted for a fresh id so the semantics
+are unambiguous ("this is a shop seller, not a PK"). The shipped 7.72/8.0
+protocol just reads a single byte for skull, so any 0..255 works as long as
+client maps it.
+
+#### `src/player.cpp` — `getSkullClient` patches the skull on-the-fly
+```cpp
+// PlayerShop: if this player has shop active (storage 88810 == 1), return
+// SHOP_ICON to ALL viewers regardless of world/PvP type.
+if (creature) {
+    const Player* targetPlayer = creature->getPlayer();
+    if (targetPlayer) {
+        int32_t playerShopFlag;
+        if (targetPlayer->getStorageValue(88810, playerShopFlag) && playerShopFlag == 1) {
+            return SHOP_ICON;
+        }
+    }
+}
+```
+That's all that was needed for the icon. Server now writes the new skull byte
+into every `AddCreature` packet (when the creature first appears in the spec
+range of another player). **No more custom opcode tick** for the icon — just
+sits in the protocol like PK does.
+
+#### `src/player.cpp` — `canWalkthrough` / `canWalkthroughEx` simplified
+Removed the upstream "ALLOW_WALKTHROUGH in PZ + 2-second cooldown +
+position-match" logic entirely. Now both functions just return:
+```cpp
+if (group->access || creature->isInGhostMode()) return true;
+return false;
+```
+Reason: the upstream logic let click-to-walk *bypass* the cooldown because the
+A* pathfinder calls `canWalkthrough` once per evaluated tile (registering
+`lastWalkthroughAttempt` and `lastWalkthroughPosition`). When the player
+actually arrived at the seller's tile, the second call inside the 2-second
+window passed silently. Setinha (manual stepping) only fires the function once
+per attempt, so it correctly bumped against the gate. By killing the
+walkthrough logic entirely, both setinha and click behave the same: nobody
+walks through anybody. GMs (access) and ghost-mode still walk through.
+
+#### `src/luascript.cpp` + `src/luascript.h` — exposed `Game.updateCreatureSkull(creature)`
+Already existed in C++ (`Game::updateCreatureSkull` calls
+`sendCreatureSkull` on every spec) but had no Lua binding. Without it,
+`getSkullClient` only re-evaluates when a spec enters the spec range — so
+the **transition** "open/close shop in front of someone already nearby"
+was still slow. Now Lua can:
+```lua
+player:setStorageValue(88810, 1)
+Game.updateCreatureSkull(player)   -- pushes the new skull to all specs
+```
+Implementation:
+```cpp
+int LuaScriptInterface::luaGameUpdateCreatureSkull(lua_State* L) {
+    Creature* creature = getCreature(L, 1);
+    if (!creature) { lua_pushnil(L); return 1; }
+    g_game.updateCreatureSkull(creature);
+    pushBoolean(L, true);
+    return 1;
+}
+```
+Also added `registerEnum(SHOP_ICON)` so the Lua constant is available.
+
+### Lua server changes
+
+#### `data/scripts/playershop/02_core.lua`
+- `PlayerShop_Open` calls `Game.updateCreatureSkull(player)` right after
+  `setStorageValue(88810, 1)`. Icon appears instant for everyone in spec
+  range.
+- `PlayerShop_Close` does the same right after `setStorageValue(88810, -1)`.
+  Icon disappears instant.
+- **Recursion-into-containers bug fixed**: this fork does NOT expose
+  `Item:getContainer()` (only `Container` methods on the userdata directly,
+  since `setItemMetatable` assigns the Container metatable when
+  `item->getContainer()` is non-null in C++). The old code did
+  `local c = it.getContainer and it:getContainer()` which short-circuited
+  to `nil` for every item — meaning **the recursion into BPs in the depot
+  never fired**. Now uses `if ItemType(it:getId()):isContainer() then
+  it:getSize(); it:getItem(i)` directly. Touched `findItemInDepot`,
+  `removeFromDepots`, the cross-slot stock check and
+  `PlayerShop_SendInventoryList`.
+- **Empty-container filter**: backpacks/bags only enter the picker list if
+  they're 100% empty. Defense-in-depth: even if the picker bypassed the
+  filter, `removeFromDepots` checks `isCont and getSize() > 0` inline
+  before calling `it:remove()`, so a non-empty container can never be
+  destroyed by mistake.
+- **Stackable vs non-stackable aggregation**: stackables aggregate by
+  `itemId` (1 entry total, count summed); non-stackables become one entry
+  per instance with `count=1` and a unique virtual `uid` (incremental
+  counter). Each entry now carries a `stackable` boolean in the payload.
+  Uids are regenerated on every `SendInventoryList` call; client caches
+  the snapshot and reuses it across slots so the uid filter (preventing
+  double-booking) stays consistent.
+- **Buyer rollback if no inv space**: `buyer:addItem(itemId, qty, false)`
+  with `canDropOnMap=false`. Returns nil if cap/slots/bag are full → gold
+  refund + reject. No more items dropping on the floor.
+- **PK can't open shop**: `canOpenShop` rejects skull White/Red/Black.
+- **Logout returns items to depot**: `04_events.lua` logout handler calls
+  `PlayerShop_Close(playerId, reason, player)` so the depot inserts run
+  while the player ref is still valid; server's auto-save persists.
+- **Owner-view mode**: clicking "Open Shop" on yourself with an active
+  shop opens the same `ShopViewWindow` used by buyers, but in owner mode
+  (Comprar buttons hidden, Fechar becomes "Cancelar Loja" → sends
+  `OPCODE_SHOP_CLOSE`). Server flag in payload: `isOwner = 1` when
+  `buyer == sellerId`. Each successful purchase also re-sends `SHOP_DATA`
+  to the seller so the owner-view refreshes live.
+- **Green floating sale message**: seller gets `MESSAGE_INFO_DESCR`
+  ("VENDA! X comprou Yx Z por N gold..."), routes to `centerGreen` via
+  the client's MessageMode mapping (same path as `/look`).
+
+#### `data/scripts/playershop/04_events.lua`
+- `stateTick` interval 3000 → 250ms. Now does spec-diff: keeps a
+  `LastSeenSpecs[sellerId] = { [specId] = true }` cache and only sends
+  `STATE_BROADCAST` to specs that **just** entered the seller's range
+  since the last tick. Plus a re-affirm to the seller themself every ~2s
+  (8 ticks) to keep `iAmSelling` locked.
+  This is now mostly redundant for the icon (skull comes via protocol)
+  but still drives: shop text in cache, `iAmSelling` walking lock,
+  `sellingCreatures` for the menu hook visibility on others.
+
+### Client changes (`otclientv80`)
+
+#### `modules/gamelib/creature.lua`
+```lua
+ShopIcon = 7    -- new constant matching server's SHOP_ICON
+...
+function getSkullImagePath(skullId)
+  ...
+  elseif skullId == ShopIcon then
+    path = '/modules/game_playershop/icons/shop_icon'
+  end
+end
+```
+Now `Creature:onSkullChange(7)` (called automatically by the engine when the
+server sends the new skull) loads `shop_icon.png` instead of leaving it blank.
+
+#### `modules/game_playershop/playershop.lua`
+- Removed the manual `setSkull(1) + setSkullTexture(SHOP_ICON_PATH)` from
+  `onStateBroadcast`: it's not needed anymore since the icon comes via
+  protocol.
+- Removed the `connect(Creature, onAppear, ...)` re-apply hook — also
+  redundant.
+- `onStateBroadcast(isOpen=0)` now just clears the `sellingCreatures[cid]`
+  cache and the `iAmSelling` flag. The skull restoration is the engine's
+  responsibility (server sends a new skull update via the same
+  `Game.updateCreatureSkull` call).
+- Walking/chat/turn locks already gated on `iAmSelling`; that flag stays
+  in sync via STATE_BROADCAST as before.
+
+#### `modules/game_playershop/create_shop.lua`
+- Picker rewritten to use a **sprite-grid** layout (`PickerCell` style:
+  56×64 tile with item sprite + count badge + truncated name + tooltip
+  on hover; gold border on hover, brown highlight when selected).
+  `PickerWindow` style has search field, scrollable grid, **OK button**
+  (next to Cancel; click cell + OK to confirm, double-click also works,
+  Enter confirms).
+- Search filter is live (case-insensitive substring on item name).
+- Already-allocated filter: stackables subtract `count` per `itemId` from
+  other slots; non-stackables hide the entry by `uid`. The current slot
+  is excluded from subtraction so the user can replace its selection.
+- Inventory snapshot is **fetched once per `openCreateShop`** and cached
+  in `inventoryList`. `openItemPicker` re-uses the cache (without
+  re-requesting). Critical because the server regenerates virtual uids on
+  every `SendInventoryList`; if we re-fetched per-slot, the uids saved
+  in earlier slots would no longer match.
+- Each cell creation wrapped in `pcall` and a `panel:updateLayout()` is
+  called at the end — guards against a single bad item id breaking the
+  whole picker, and forces grid recalc.
+- First `populatePickerList` is deferred via `scheduleEvent(..., 1)`
+  to give the grid panel a frame to compute its width before the cells
+  are added (otherwise some cells were rendering at position 0,0).
+
+#### `modules/game_playershop/shop_view.lua`
+- Buyer view rebuilt on `ShopBuyRow` style (44px row with 36×36 item
+  sprite + name + gold price + qty TextEdit + Buy button).
+- Owner-mode (`isOwner=1` from server): hides qty/buy on each row, makes
+  the close button "Cancelar Loja" (sends `OPCODE_SHOP_CLOSE`).
+- `viewSellerId` tracking + `onStateBroadcast(isOpen=0)` auto-closes the
+  view if the seller's shop ends while we have it open (last item sold,
+  logout, expiration, etc.).
+- ESC closes the window without canceling the shop.
+- `sellerLine` got `anchors.right + text-auto-resize + text-wrap` so
+  long seller names ("Vendedor: Some Long Name") aren't cut off.
+
+#### `modules/game_playershop/playershop.otui`
+- Added new styles: `PickerCell`, `PickerWindow`, `QtyWindow`,
+  `ShopBuyRow`, plus expanded `ShopViewWindow`.
+
+### Reference: storage key + ids
+
+| Item | Value | Notes |
+|---|---|---|
+| Storage key | `88810` | `setStorageValue(88810, 1)` = selling, `-1` = not |
+| Skull id (server `Skulls_t`) | `SHOP_ICON = 7` | Set by `getSkullClient` when storage flag is 1 |
+| Skull id (client `creature.lua`) | `ShopIcon = 7` | Maps to `/modules/game_playershop/icons/shop_icon` |
+| Opcode `STATE_BROADCAST` | 135 | Now only used for shop text + `iAmSelling` flag, NOT for icon |
+| Opcode `INVENTORY_LIST` | 137 | Carries the new `stackable` byte per entry |
+| Opcode `SHOP_DATA` | 134 | Carries `isOwner` byte for owner-view mode |
+| Opcode `SHOP_CLOSE` | 131 | Used by owner "Cancelar Loja" button |
+
+### Outstanding (not blockers, future polish)
+
+- **Lista vazia sem filtro**: user reported some cases where the picker
+  shows blank until typing in the search. Mitigated by the deferred
+  `populatePickerList` + pcall around cell creation, but no F12 trace was
+  captured to confirm the root cause. If it returns, ask user for the
+  `[playershop]` debug prints from F12 to diagnose.
+- Bubble with shop text over the seller's head (still a no-op stub —
+  `Creature:getDrawOffset` returns wrong values during local player
+  walking).
+- VIP list color sync — `Player:getVipList()` still not exposed.
+- Persistence across server restart — shops still die when server stops.

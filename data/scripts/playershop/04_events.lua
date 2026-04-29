@@ -77,17 +77,60 @@ tick:onThink(function()
 end)
 tick:register()
 
--- ---- bubble re-broadcast: STATE every 3s ensures any client (incl. ones
--- ----  that just came into spec range) has the seller in sellingCreatures
--- ----  so the bubble widget renders for them too. Cheap server side, the
--- ----  bubble itself is a persistent UIWidget on each client.
+-- ---- spec-diff broadcast: detecta novos specs em volta do seller
+-- (subiram escada, andaram pra perto, logaram) e manda STATE_BROADCAST
+-- IMEDIATAMENTE pra cada um. Resultado: o icone aparece quase tao rapido
+-- quanto o skull de PK do TFS nativo, sem desperdicar bandwidth com
+-- broadcasts redundantes pra quem ja tem a creature em cache.
+local LastSeenSpecs = {}  -- [sellerId] = { [specId] = true }
+
 local stateTick = GlobalEvent("PlayerShopStateTick")
-stateTick:interval(3000)
+stateTick:interval(250)
 stateTick:onThink(function()
     for sellerId, shop in pairs(ActiveShops) do
         local seller = Player(sellerId)
         if seller and shop.text and shop.text ~= "" then
-            PlayerShop_BroadcastState(seller, true)
+            local pos = seller:getPosition()
+            local currentSpecs = Game.getSpectators(pos, false, true, 7, 7, 5, 5)
+            local current = {}
+            for _, p in ipairs(currentSpecs) do
+                current[p:getId()] = true
+            end
+            local previous = LastSeenSpecs[sellerId] or {}
+
+            -- Monta o payload uma vez (mesmo pra todos os novos specs).
+            local payload = PlayerShop_PackU32(sellerId)
+                         .. PlayerShop_PackU8(1)
+                         .. PlayerShop_PackStr(shop.text)
+
+            -- Manda STATE so pros specs que apareceram desde o ultimo tick.
+            for specId, _ in pairs(current) do
+                if not previous[specId] then
+                    local p = Player(specId)
+                    if p then
+                        PlayerShop_SendOpcode(p, PlayerShopOpcode.STATE_BROADCAST,
+                            payload)
+                    end
+                end
+            end
+
+            -- Garantia: re-envia pro proprio seller a cada ~2s pra travar
+            -- o iAmSelling/icone caso o cliente dele tenha perdido algum
+            -- pacote anterior. Cheap (1 packet/2s/seller).
+            shop._reaffirmTicks = (shop._reaffirmTicks or 0) + 1
+            if shop._reaffirmTicks >= 8 then  -- 8 * 250ms = 2s
+                shop._reaffirmTicks = 0
+                PlayerShop_SendOpcode(seller, PlayerShopOpcode.STATE_BROADCAST,
+                    payload)
+            end
+
+            LastSeenSpecs[sellerId] = current
+        end
+    end
+    -- Limpa entradas de sellers que nao estao mais ativos.
+    for sellerId, _ in pairs(LastSeenSpecs) do
+        if not ActiveShops[sellerId] then
+            LastSeenSpecs[sellerId] = nil
         end
     end
     return true

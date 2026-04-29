@@ -26,8 +26,14 @@ local function canOpenShop(player)
         return false, "Voce esta em battle. Saia do combate primeiro."
     end
     local skull = player:getSkull()
-    if skull == SKULL_RED or skull == SKULL_BLACK then
-        return false, "Skull red/black nao pode abrir loja."
+    if skull == SKULL_WHITE then
+        return false, "Voce esta com white skull (PK). Nao pode abrir loja."
+    end
+    if skull == SKULL_RED then
+        return false, "Voce esta com red skull (PK). Nao pode abrir loja."
+    end
+    if skull == SKULL_BLACK then
+        return false, "Voce esta com black skull. Nao pode abrir loja."
     end
     -- (getTradeState() not available in this TFS build; trade lock skipped)
     return true
@@ -251,6 +257,11 @@ function PlayerShop_Open(player, payload)
     player:setStorageValue(PlayerShopConfig.storageKey, 1)
     player:sendTextMessage(MESSAGE_INFO_DESCR, "Loja aberta. Voce nao pode se mover ate fechar.")
 
+    -- Force imediato: o servidor C++ chama getSkullClient(player) e envia
+    -- o novo skull (SHOP_ICON=7) pra todos os specs via packet nativo.
+    -- Igual o PK skull -- nada de tick periodico ou opcode custom.
+    if Game.updateCreatureSkull then Game.updateCreatureSkull(player) end
+
     -- Broadcast to nearby clients (bubble+icon).
     PlayerShop_BroadcastState(player, true)
     -- Notify VIP watchers.
@@ -347,6 +358,10 @@ function PlayerShop_Close(playerId, reason, sellerOverride, viaInventory)
             print('[playershop] return items error: ' .. tostring(err))
         end
         seller:setStorageValue(PlayerShopConfig.storageKey, -1)
+        -- Force imediato: getSkullClient agora retorna o skull real
+        -- (PK ou nenhum), e o servidor envia o update nativo pra todos
+        -- os specs. Resultado: o icone some na hora pra todo mundo.
+        if Game.updateCreatureSkull then Game.updateCreatureSkull(seller) end
         seller:sendTextMessage(MESSAGE_INFO_DESCR, reason or "Loja fechada.")
         PlayerShop_BroadcastState(seller, false)
         PlayerShop_NotifyVipWatchers(seller, false)
@@ -401,8 +416,10 @@ end
 -- Send full shop data to a buyer (after they REQUEST).
 -- ---------------------------------------------------------------------------
 function PlayerShop_SendShopDataTo(buyer, sellerId)
-    -- Buyer must be inside a protection zone to OPEN a shop window.
-    if not PlayerShop_TileIsPZ(buyer:getPosition()) then
+    local isOwner = buyer:getId() == sellerId
+    -- Buyer normal precisa estar em PZ pra abrir a janela. O dono nao precisa
+    -- (ele consulta o estado da propria loja em qualquer canto da PZ).
+    if not isOwner and not PlayerShop_TileIsPZ(buyer:getPosition()) then
         PlayerShop_Reject(buyer, "Voce precisa estar em zona protegida para ver lojas.")
         return false
     end
@@ -418,11 +435,16 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
         return false
     end
 
-    OpenShopWindows[buyer:getId()] = sellerId
+    -- O dono nao entra em OpenShopWindows -- isso eh tracking de COMPRADORES
+    -- pra forcar fechamento quando shop expira. Ele eh dono, nao buyer.
+    if not isOwner then
+        OpenShopWindows[buyer:getId()] = sellerId
+    end
 
     local payload = PlayerShop_PackU32(sellerId)
                  .. PlayerShop_PackStr(seller:getName())
                  .. PlayerShop_PackStr(shop.text or "")
+                 .. PlayerShop_PackU8(isOwner and 1 or 0)  -- flag owner-mode
     local n = 0
     for _ in pairs(shop.items) do n = n + 1 end
     payload = payload .. PlayerShop_PackU8(n)
@@ -506,10 +528,14 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
     -- Items were taken out of the depot at PlayerShop_Open time and now live
     -- only in the shop entry's `count`. We just create a fresh item for the
     -- buyer with the same id/charges and decrement entry.count.
+    --
+    -- IMPORTANTE: passamos canDropOnMap=false (3o param) pra que addItem
+    -- RETORNE NIL quando nao houver cap/slot/bp livre, em vez de jogar o
+    -- item no chao. Assim conseguimos bloquear a compra com rollback.
     local itType = ItemType(entry.itemId)
     local newItem
     if itType:isStackable() then
-        newItem = buyer:addItem(entry.itemId, qty)
+        newItem = buyer:addItem(entry.itemId, qty, false)
     else
         if qty ~= 1 then
             PlayerShop_Reject(buyer, "Item nao-stackable so pode ser comprado em qty=1.")
@@ -519,14 +545,15 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
         end
         -- preserve charges on non-stackables (UH/GFB charges live in subType)
         local sub = entry.charges and entry.charges > 0 and entry.charges or 1
-        newItem = buyer:addItem(entry.itemId, sub)
+        newItem = buyer:addItem(entry.itemId, sub, false)
     end
 
     if not newItem then
-        -- ROLLBACK (addItem failed -> cap full)
+        -- ROLLBACK: sem cap, sem slot livre ou bag cheia. Devolve o gold.
         buyer:addMoney(fromBp)
         buyer:setBankBalance((buyer:getBankBalance() or 0) + fromBank)
-        PlayerShop_Reject(buyer, "Sua bag esta cheia. Compra cancelada.")
+        PlayerShop_Reject(buyer,
+            "Voce nao tem espaco/cap pra esse item. Compra cancelada.")
         return false
     end
 
@@ -543,8 +570,11 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
     local itemName = itType:getName() or "item"
     buyer:sendTextMessage(MESSAGE_INFO_DESCR,
         ("Comprou %dx %s por %d gold (bp: %d, banco: %d)."):format(qty, itemName, total, fromBp, fromBank))
+    -- Mensagem verde flutuante (centerGreen via MESSAGE_INFO_DESCR=22) pro
+    -- vendedor saber em tempo real quem comprou o que.
     seller:sendTextMessage(MESSAGE_INFO_DESCR,
-        ("%s comprou %dx %s por %d gold (creditado no banco)."):format(buyer:getName(), qty, itemName, total))
+        ("VENDA! %s comprou %dx %s por %d gold (no banco)."):format(
+            buyer:getName(), qty, itemName, total))
 
     -- If shop now empty, auto-close.
     local remaining = 0
@@ -554,6 +584,9 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
     else
         -- Refresh buyer's window.
         PlayerShop_SendShopDataTo(buyer, sellerId)
+        -- Refresh owner-view window se o vendedor estiver olhando o estoque
+        -- da propria loja (cliente decide ignorar se nao tiver janela aberta).
+        PlayerShop_SendShopDataTo(seller, sellerId)
     end
     return true
 end
@@ -579,7 +612,8 @@ isNonEmptyContainer = function(it)
 end
 
 function PlayerShop_SendInventoryList(player)
-    local agg = {}  -- key = itemId, value = {id, count, charges, name}
+    local agg = {}  -- entries que serao enviadas pro client
+    local nonStackCounter = 0  -- gera keys unicas pra cada non-stackable
 
     -- Cada visita esta em pcall. Erro num item especifico (ex: tipo
     -- "exotico") nao deve abortar a listagem inteira.
@@ -596,7 +630,17 @@ function PlayerShop_SendInventoryList(player)
                 if not isNonEmptyContainer(it) then
                     local cnt = it:getCount() or 1
                     local charges = it:getCharges() or 0
-                    local key = id
+                    local stackable = itype:isStackable() and true or false
+                    -- Stackable: agrega tudo pelo itemId (1 entry total).
+                    -- Non-stackable: cada instancia eh entry separada pra
+                    -- o vendedor poder criar offers diferentes pra cada.
+                    local key
+                    if stackable then
+                        key = id
+                    else
+                        nonStackCounter = nonStackCounter + 1
+                        key = 'ns_' .. nonStackCounter
+                    end
                     if agg[key] then
                         agg[key].count = agg[key].count + cnt
                     else
@@ -604,6 +648,7 @@ function PlayerShop_SendInventoryList(player)
                             id = id,
                             count = cnt,
                             charges = charges,
+                            stackable = stackable,
                             name = itype:getName() or "item",
                         }
                     end
@@ -633,17 +678,21 @@ function PlayerShop_SendInventoryList(player)
         end
     end)
 
-    -- Convert map -> list
+    -- Convert map -> list. Cada entry recebe um indice incremental que vira
+    -- "uid virtual" no client, util pra non-stackables onde cada entry eh
+    -- uma instancia distinta. (Pro server, na hora do Open, esse uid eh
+    -- ignorado e a busca eh por itemId.)
     local items = {}
     for _, e in pairs(agg) do items[#items + 1] = e end
 
     local payload = PlayerShop_PackU16(#items)
-    for _, e in ipairs(items) do
+    for idx, e in ipairs(items) do
         payload = payload
-               .. PlayerShop_PackU32(0)  -- uid unused (depot agg)
+               .. PlayerShop_PackU32(idx)               -- entry index (virtual uid)
                .. PlayerShop_PackU16(e.id)
                .. PlayerShop_PackU16(math.min(e.count, 0xFFFF))
                .. PlayerShop_PackU16(e.charges)
+               .. PlayerShop_PackU8(e.stackable and 1 or 0)
                .. PlayerShop_PackStr(e.name)
     end
     PlayerShop_SendOpcode(player, PlayerShopOpcode.INVENTORY_LIST, payload)

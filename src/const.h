@@ -444,6 +444,7 @@ enum Skulls_t : uint8_t {
 	SKULL_RED = 4,
 	SKULL_BLACK = 5,
 	SKULL_ORANGE = 6,
+	SHOP_ICON = 7,    // PlayerShop: indica que esse player tem loja ativa.
 };
 
 enum PartyShields_t : uint8_t {

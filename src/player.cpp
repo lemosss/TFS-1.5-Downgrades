@@ -745,53 +745,27 @@ bool Player::canSeeGhostMode(const Creature*) const
 
 bool Player::canWalkthrough(const Creature* creature) const
 {
+	// Apenas access groups (GM/God) e creatures em ghost-mode atravessam.
+	// Players normais NAO podem mais atravessar outros players, nem via
+	// setinha nem via click-to-walk/A*. Antes, TFS upstream permitia
+	// walkthrough em PZ apos "duas tentativas" (cooldown de 2s); o
+	// pathfinding registrava timestamps em cada tile avaliado, fazendo
+	// click-to-walk passar direto. Removido por completo.
 	if (group->access || creature->isInGhostMode()) {
 		return true;
 	}
-
-	const Player* player = creature->getPlayer();
-	if (!player || !g_config.getBoolean(ConfigManager::ALLOW_WALKTHROUGH)) {
-		return false;
-	}
-
-	const Tile* playerTile = player->getTile();
-	if (!playerTile || (!playerTile->hasFlag(TILESTATE_PROTECTIONZONE) && player->getLevel() > static_cast<uint32_t>(g_config.getNumber(ConfigManager::PROTECTION_LEVEL)))) {
-		return false;
-	}
-
-	const Item* playerTileGround = playerTile->getGround();
-	if (!playerTileGround || !playerTileGround->hasWalkStack()) {
-		return false;
-	}
-
-	Player* thisPlayer = const_cast<Player*>(this);
-	if ((OTSYS_TIME() - lastWalkthroughAttempt) > 2000) {
-		thisPlayer->setLastWalkthroughAttempt(OTSYS_TIME());
-		return false;
-	}
-
-	if (creature->getPosition() != lastWalkthroughPosition) {
-		thisPlayer->setLastWalkthroughPosition(creature->getPosition());
-		return false;
-	}
-
-	thisPlayer->setLastWalkthroughPosition(creature->getPosition());
-	return true;
+	return false;
 }
 
 bool Player::canWalkthroughEx(const Creature* creature) const
 {
+	// Mesma regra simplificada de canWalkthrough: apenas access (GM/God)
+	// pode atravessar outros players. Removido o walkthrough condicional
+	// em PZ pra fechar tanto setinha quanto click-to-walk de uma vez.
 	if (group->access) {
 		return true;
 	}
-
-	const Player* player = creature->getPlayer();
-	if (!player || !g_config.getBoolean(ConfigManager::ALLOW_WALKTHROUGH)) {
-		return false;
-	}
-
-	const Tile* playerTile = player->getTile();
-	return playerTile && (playerTile->hasFlag(TILESTATE_PROTECTIONZONE) || player->getLevel() <= static_cast<uint32_t>(g_config.getNumber(ConfigManager::PROTECTION_LEVEL)));
+	return false;
 }
 
 void Player::onReceiveMail() const
@@ -3887,6 +3861,21 @@ Skulls_t Player::getSkull() const
 
 Skulls_t Player::getSkullClient(const Creature* creature) const
 {
+	// PlayerShop: se a creature alvo esta com loja ativa, retorna SHOP_ICON
+	// (id 7) pra TODOS, independente de world type / pvp. O cliente OTC
+	// mapeia esse id pro icone shop_icon.png. Como o skull eh enviado no
+	// proprio packet AddCreature do protocolo, fica instantaneo igual o
+	// skull de PK -- sem depender do STATE_BROADCAST custom.
+	if (creature) {
+		const Player* targetPlayer = creature->getPlayer();
+		if (targetPlayer) {
+			int32_t playerShopFlag;
+			if (targetPlayer->getStorageValue(88810, playerShopFlag) && playerShopFlag == 1) {
+				return SHOP_ICON;
+			}
+		}
+	}
+
 	if (!creature || g_game.getWorldType() != WORLD_TYPE_PVP) {
 		return SKULL_NONE;
 	}
