@@ -1,5 +1,5 @@
 local config = {
-	days = 90,
+	days = 7,
 	maxDays = 365,
 	price = 10000
 }
@@ -10,7 +10,7 @@ function onSay(player, words, param)
 	end
 
 	if player:getPremiumDays() <= config.maxDays then
-		if player:removeTotalMoney(config.price) then
+		if player:removeMoney(config.price) then
 			player:addPremiumDays(config.days)
 			player:sendTextMessage(MESSAGE_INFO_DESCR, "You have bought " .. config.days .." days of premium account.")
 		else

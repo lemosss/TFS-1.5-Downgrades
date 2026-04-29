@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Magma Crawler" nameDescription="a magma crawler" race="fire" experience="2700" speed="220" manacost="0">
+	<health now="4800" max="4800" />
+	<look type="492" corpse="17336" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="1" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="4" />
+		<flag staticattack="90" />
+		<flag runonhealth="300" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" skill="60" attack="58" />
+		<attack name="physical" interval="2000" chance="10" length="8" spread="0" min="-300" max="-1100">
+			<attribute key="areaEffect" value="mortarea" />
+		</attack>
+		<attack name="fire" interval="2000" chance="15" length="3" spread="2" min="-290" max="-800">
+			<attribute key="areaEffect" value="fireattack" />
+		</attack>
+		<attack name="magma crawler soulfire" interval="2000" chance="20" />
+		<attack name="soulfire" interval="2000" chance="10" range="7" target="1" />
+		<attack name="fire" interval="2000" chance="15" target="0" radius="3" min="-140" max="-180">
+			<attribute key="areaEffect" value="fire" />
+		</attack>
+		<attack name="speed" interval="2000" chance="10" radius="2" target="0" spread="0" speedchange="-800" duration="20000">
+			<attribute key="areaEffect" value="redshimmer" />
+		</attack>
+	</attacks>
+	<defenses armor="45" defense="45">
+		<defense name="invisible" interval="2000" chance="10" duration="5000">
+			<attribute key="areaEffect" value="blueshimmer" />
+		</defense>
+	</defenses>
+	
+	<immunities>
+		<immunity fire="1" />
+		<immunity earth="1" />
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="Crrroak!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="50000" />
+		<item id="2148" countmax="99" chance="50000" />
+		<item id="2152" countmax="5" chance="100000" />
+		<item id="5909" chance="2310" />
+		<item id="5914" chance="2980" />
+		<item id="5911" chance="930" />
+		<item id="2167" chance="1650" />
+		<item id="2145" countmax="3" chance="8800" />
+		<item id="2529" chance="1550" />
+		<item id="5880" chance="4280" />
+		<item id="2154" chance="1030" />
+		<item id="2392" chance="1680" />
+	</loot>
+</monster>

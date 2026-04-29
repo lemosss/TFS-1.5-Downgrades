@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Worm Priestess" nameDescription="a worm priestess" race="blood" experience="1500" speed="200" manacost="0">
+	<health now="1100" max="1100" />
+	<look type="613" corpse="5962" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="4" />
+		<flag staticattack="90" />
+		<flag runonhealth="0" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" min="0" max="-40" />
+		<attack name="energy" interval="2000" chance="15" range="7" min="0" max="-165">
+			<attribute key="shootEffect" value="energy" />
+			<attribute key="areaEffect" value="energy" />
+		</attack>
+		<attack name="fire" interval="2000" chance="15" range="7" min="0" max="-105">
+			<attribute key="shootEffect" value="fire" />
+			<attribute key="areaEffect" value="firearea" />
+		</attack>
+		<attack name="energyfield" interval="2000" chance="10" range="7" target="1">
+			<attribute key="shootEffect" value="energyball" />
+		</attack>
+	</attacks>
+	<defenses armor="20" defense="20" />
+	
+	<voices interval="5000" chance="10">
+		<voice sentence="An enemy of the worm shall become his food!" />
+		<voice sentence="The great worm will swallow you!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="47" chance="82000" />
+		<item id="2666" chance="30070" />
+		<item id="2510" chance="2500" />
+		<item id="2406" chance="8000" />
+		<item id="2513" chance="1400" />
+		<item id="2129" chance="190" />
+		<item id="2381" chance="1003" />
+		<item id="2490" chance="220" />
+		<item id="2209" chance="90" />
+		<item id="7398" chance="80" />
+		</loot>
+</monster>

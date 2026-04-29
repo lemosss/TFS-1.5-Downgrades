@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Enraged Crystal Golem" nameDescription="an enraged crystal golem" race="energy" experience="550" speed="200" manacost="0">
+	<health now="700" max="700" />
+	<look type="508" corpse="18466" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="0" />
+		<flag staticattack="70" />
+		<flag runonhealth="0" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" skill="50" attack="50" />
+	</attacks>
+	<defenses armor="15" defense="15" />
+	
+	<immunities>
+		<immunity fire="1" />
+		
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="Crrrrk! Chhhhr!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="100000" />
+		<item id="7449" chance="4710" />
+		<item id="7454" chance="360" />
+	</loot>
+</monster>

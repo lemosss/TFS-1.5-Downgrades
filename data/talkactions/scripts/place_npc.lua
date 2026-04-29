@@ -9,7 +9,7 @@ function onSay(player, words, param)
 
 	local position = player:getPosition()
 	local npc = Game.createNpc(param, position)
-	if npc then
+	if npc ~= nil then
 		npc:setMasterPos(position)
 		position:sendMagicEffect(CONST_ME_MAGIC_RED)
 	else

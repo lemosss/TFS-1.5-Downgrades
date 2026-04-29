@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <talkactions>
 	<!-- commands -->
-	<talkaction words="/attr" separator=" " script="attributes.lua" />
+	<!-- Gamemasters -->
+        <talkaction words="/attr" separator=" " script="attributes.lua" />
 	<talkaction words="/ban" separator=" " script="ban.lua" />
 	<talkaction words="/ipban" separator=" " script="ipban.lua" />
 	<talkaction words="/unban" separator=" " script="unban.lua" />
@@ -13,6 +14,7 @@
 	<talkaction words="/t" script="teleport_home.lua" />
 	<talkaction words="/town" separator=" " script="teleport_to_town.lua" />
 	<talkaction words="/a" separator=" " script="teleport_ntiles.lua" />
+	<talkaction words="/pos" separator=" " script="position.lua" />
 	<talkaction words="/info" separator=" " script="info.lua" />
 	<talkaction words="/r" separator=" " script="removething.lua" />
 	<talkaction words="/kick" separator=" " script="kick.lua" />
@@ -32,20 +34,21 @@
 	<talkaction words="/ghost" script="ghost.lua" />
 	<talkaction words="/clean" script="clean.lua" />
 	<talkaction words="/hide" script="hide.lua" />
-	<talkaction words="/reload" separator=" " script="reload.lua" />
-	<talkaction words="/raid" separator=" " script="force_raid.lua" />
 
 	<!-- player talkactions -->
+	<talkaction words="!outfit" script="guild_outfit.lua"/>
 	<talkaction words="!buypremium" script="buyprem.lua" />
 	<talkaction words="!buyhouse" script="buyhouse.lua" />
-	<talkaction words="!sellhouse" separator=" " script="sellhouse.lua" />
 	<talkaction words="!leavehouse" script="leavehouse.lua" />
 	<talkaction words="!changesex" script="changesex.lua" />
 	<talkaction words="!uptime" script="uptime.lua" />
-	<talkaction words="!deathlist" separator=" " script="deathlist.lua" />
-	<talkaction words="!kills" script="kills.lua" />
-	<talkaction words="!online;/online" script="online.lua" />
+	<talkaction words="!frags" script="kills.lua" />
 	<talkaction words="!serverinfo" script="serverinfo.lua" />
+	<talkaction words="!exp" script="expmana.lua"/>
+    <talkaction words="!mana" script="expmana.lua"/>
+	<talkaction words="!share" script="partyShareExp.lua"/>
+	<talkaction words="/share" script="partyShareExp.lua"/>
+	<talkaction words="!deathlist" script="deathlist.lua" />
 
 	<!-- test talkactions -->
 	<talkaction words="!z" separator=" " script="magiceffect.lua" />

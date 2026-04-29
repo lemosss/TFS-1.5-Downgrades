@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Lizard Legionnaire" nameDescription="a lizard legionnaire" race="blood" experience="1100" speed="230" manacost="0">
+	<health now="1400" max="1400" />
+	<look type="338" corpse="11276" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="1" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="0" />
+		<flag targetdistance="4" />
+		<flag staticattack="90" />
+		<flag runonhealth="10" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" skill="50" attack="60" />
+		<attack name="physical" interval="2000" chance="40" range="7" target="1" min="-0" max="-200">
+			<attribute key="shootEffect" value="spear" />
+		</attack>
+	</attacks>
+	<defenses armor="25" defense="25" />
+	
+	<immunities>
+		<immunity earth="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="Tssss!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="44000" />
+		<item id="2148" countmax="65" chance="54000" />
+		<item id="5881" countmax="3" chance="980" />
+		<item id="5876" chance="970" />
+		<item id="2145" countmax="2" chance="1001" />
+		</loot>
+</monster>

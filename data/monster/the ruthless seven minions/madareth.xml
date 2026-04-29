@@ -1,0 +1,84 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Madareth" nameDescription="Madareth" race="fire" experience="10000" speed="380" manacost="0">
+	<health now="75000" max="75000" />
+	<look type="12" head="77" body="116" legs="82" feet="79" corpse="6068" />
+	<targetchange interval="5000" chance="8" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="1" />
+		<flag staticattack="85" />
+		<flag runonhealth="1200" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" min="0" max="-2000" />
+		<attack name="energy" interval="2000" chance="15" radius="4" target="1" min="-180" max="-660">
+			<attribute key="areaEffect" value="purpleenergy" />
+		</attack>
+		<attack name="physical" interval="2000" chance="10" length="5" spread="2" min="-600" max="-850">
+			<attribute key="areaEffect" value="blacksmoke" />
+		</attack>
+		<attack name="manadrain" interval="2000" chance="20" radius="4" target="1" min="0" max="-200">
+			<attribute key="areaEffect" value="redshimmer" />
+		</attack>
+		<attack name="manadrain" interval="2000" chance="5" radius="5" target="1" min="0" max="-250">
+			<attribute key="areaEffect" value="redshimmer" />
+		</attack>
+	</attacks>
+	<defenses armor="48" defense="46">
+		<defense name="healing" interval="3000" chance="14" min="400" max="900">
+			<attribute key="areaEffect" value="blueshimmer" />
+		</defense>
+	</defenses>
+	
+	<immunities>
+		<immunity invisible="1" />
+		<immunity paralyze="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="I am going to play with yourself!" yell="1" />
+		<voice sentence="Feel my wrath!" />
+		<voice sentence="No one matches my battle prowess!" />
+		<voice sentence="You will all die!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="100000" />	
+		<item id="7443" chance="33000" />					
+		<item id="7440" chance="28000" />					
+		<item id="7439" chance="23000" />					
+		<item id="6300" chance="19000" />					
+		<item id="2183" chance="19000" />					
+		<item id="2370" chance="19000" />					
+		<item id="2152" countmax="26" chance="19000" />		
+		<item id="2377" chance="19000" />					
+		<item id="7404" chance="16000" />					
+		<item id="2208" chance="16000" />					
+		<item id="2209" chance="14000" />					
+		<item id="6500" chance="14000" />					
+		<item id="7407" chance="14000" />					
+		<item id="2071" chance="14000" />					
+		<item id="7418" chance="14000" />					
+		<item id="3953" chance="14000" />					
+		<item id="2187" chance="11000" />					
+		<item id="7416" chance="9500" />						
+		<item id="7449" chance="9500" />						
+		<item id="2214" chance="9500" />						
+		<item id="5954" countmax="2" chance="7000" />		
+		<item id="2168" chance="7000" />						
+		<item id="7383" chance="7000" />						
+		<item id="2169" chance="7000" />						
+		<item id="2079" chance="7000" />						
+		<item id="2374" chance="7000" />						
+		<item id="3952" chance="4700" />						
+		<item id="2213" chance="4700" />						
+		<item id="2396" chance="4700" />						
+		<item id="7386" chance="4700" />						
+		<item id="2207" chance="4700" />						
+	</loot>
+</monster>

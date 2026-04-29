@@ -1,10 +1,10 @@
 function onSay(player, words, param)
-	if player:getAccountType() <= ACCOUNT_TYPE_SENIORTUTOR then
+	if player:getAccountType() <= ACCOUNT_TYPE_TUTOR then
 		return true
 	end
 
 	local target = Player(param)
-	if not target then
+	if target == nil then
 		player:sendCancelMessage("A player with that name is not online.")
 		return false
 	end

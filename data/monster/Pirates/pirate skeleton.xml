@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Pirate Skeleton" nameDescription="a pirate skeleton" race="undead" experience="85" speed="180" manacost="0">
+	<health now="190" max="190" />
+	<look type="195" corpse="6070" />
+	<targetchange interval="5000" chance="0" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="1" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="0" />
+		<flag staticattack="90" />
+		<flag targetdistance="1" />
+		<flag runonhealth="20" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" min="0" max="-50" />
+	</attacks>
+	<defenses armor="15" defense="15" />
+	
+	<immunities>
+		
+	</immunities>
+	<loot>
+		<item id="2148" countmax="25" chance="48000" />	
+		<item id="2231" chance="5220" />					
+		<item id="2229" chance="4460" />					
+		<item id="2230" chance="4380" />					
+		<item id="2449" chance="1030" />					
+		<item id="2406" chance="1030" />					
+		<item id="2376" chance="580" />					
+	</loot>
+</monster>

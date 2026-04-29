@@ -1,0 +1,22 @@
+<npc name="Sigurd" script="Sigurd.lua" floorchange="0" walkinterval="3000" >
+
+	<health now="100" max="100"/>
+
+	<look type="69" head="0" body="0" legs="0" feet="0"/>
+
+	<parameters>
+
+		<parameter key="message_greet" value="Welcome to the magic store, |PLAYERNAME|!"/>
+
+		<parameter key="message_placedinqueue" value="You next |PLAYERNAME|, jawoll!"/>
+
+		<parameter key="module_shop" value="1" />
+
+		<parameter key="shop_buyable" value="blank rune,2260,10;snakebite rod,2182,500;spellbook,2175,150;lifefluid,2006,60,10;manafluid,2006,100,7,manafluid;wand of vortex,2190,500;quagmire rod,2181,10000;snakebite rod,2182,500;moonlight rod,2186,1000;volcanic rod,2185,5000;tempest rod,2183,15000;wand of dragonbreath,2191,1000;wand of plauge,2188,5000;wand of cosmic energy,2189,10000;" />
+
+		<parameter key="shop_sellable" value="vial,2006,5;" />
+
+	</parameters>
+
+</npc>
+

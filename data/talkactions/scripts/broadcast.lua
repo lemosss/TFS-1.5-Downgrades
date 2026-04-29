@@ -1,5 +1,5 @@
 function onSay(player, words, param)
-	if not player:hasFlag(PlayerFlag_CanBroadcast) then
+	if not getPlayerFlagValue(player, PlayerFlag_CanBroadcast) then
 		return true
 	end
 

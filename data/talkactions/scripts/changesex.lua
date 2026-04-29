@@ -1,4 +1,4 @@
-local premiumDaysCost = 3
+local premiumDaysCost = 5
 
 function onSay(player, words, param)
 	if player:getGroup():getAccess() then

@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Execowtioner" nameDescription="an execowtioner" race="blood" experience="2400" speed="220" manacost="0">
+	<health now="3500" max="3500" />
+	<look type="609" corpse="5962" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="1" />
+		<flag staticattack="90" />
+		<flag runonhealth="0" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" min="0" max="-260" />
+		<attack name="physical" interval="2000" chance="10" range="3" min="-100" max="-200">
+			<attribute key="shootEffect" value="death" />
+			<attribute key="areaEffect" value="smallclouds" />
+		</attack>
+		<attack name="physical" interval="3000" chance="34" range="7" min="0" max="-280">
+			<attribute key="shootEffect" value="whirlwindaxe" />
+		</attack>
+	</attacks>
+	<defenses armor="40" defense="40" />
+	
+	<immunities>
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="I'm the one who puts the cute into execute!" />
+		<voice sentence="I'm here to punish!" />
+		<voice sentence="Justice is swift and unavoidable!" />
+		<voice sentence="I'll bring justice!" />
+		<voice sentence="There is excellence in execution!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="100000" />	
+		<item id="2152" countmax="3" chance="65000" />		
+		<item id="5878" chance="14000" />					
+		
+		<item id="2666" chance="6600" />						
+		<item id="2147" countmax="2" chance="4800" />		
+		<item id="5911" chance="3000" />						
+		<item id="7412" chance="1800" />						
+		<item id="2487" chance="600" />						
+		
+		<item id="2430" chance="600" />						
+		<item id="7401" chance="600" />						
+	</loot>
+</monster>

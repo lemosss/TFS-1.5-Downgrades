@@ -1624,12 +1624,16 @@ void ProtocolGame::sendShop(Npc* npc, const ShopInfoList& itemList)
 {
 	NetworkMessage msg;
 	msg.addByte(0x7A);
-	msg.addString(npc->getName());
 
-	uint16_t itemsToSend = std::min<size_t>(itemList.size(), std::numeric_limits<uint16_t>::max());
-	msg.add<uint16_t>(itemsToSend);
+	// NPC-name field was introduced at client 9.10. Tibia 8.0 client
+	// doesn't expect it; sending desyncs the parser.
+	(void)npc;
 
-	uint16_t i = 0;
+	// 8.0 wire format: uint8 list count (uint16 was introduced at client 9.00).
+	uint8_t itemsToSend = std::min<size_t>(itemList.size(), std::numeric_limits<uint8_t>::max());
+	msg.addByte(itemsToSend);
+
+	uint8_t i = 0;
 	for (auto it = itemList.begin(); i < itemsToSend; ++it, ++i) {
 		AddShopItem(msg, *it);
 	}
@@ -1648,7 +1652,9 @@ void ProtocolGame::sendSaleItemList(const std::list<ShopInfo>& shop)
 {
 	NetworkMessage msg;
 	msg.addByte(0x7B);
-	msg.add<uint64_t>(player->getMoney() + player->getBankBalance());
+	// 8.0 wire format expects uint32 money (uint64 was introduced at client 9.73).
+	uint64_t totalMoney = player->getMoney() + player->getBankBalance();
+	msg.add<uint32_t>(std::min<uint64_t>(totalMoney, std::numeric_limits<uint32_t>::max()));
 
 	std::map<uint16_t, uint32_t> saleMap;
 

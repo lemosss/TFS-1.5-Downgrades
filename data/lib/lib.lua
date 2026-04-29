@@ -4,6 +4,10 @@ dofile('data/lib/core/core.lua')
 -- Compatibility library for our old Lua API
 dofile('data/lib/compat/compat.lua')
 
--- Debugging helper function for Lua developers
-dofile('data/lib/debugging/dump.lua')
-dofile('data/lib/debugging/lua_version.lua')
+
+-- Quests library
+dofile('data/lib/quests/quest.lua')
+
+
+-- Miscellaneous library
+dofile('data/lib/miscellaneous/miscellaneous.lua')

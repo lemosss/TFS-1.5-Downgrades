@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Ironblight" nameDescription="an ironblight" race="undead" experience="4400" speed="220" manacost="0">
+	<health now="6600" max="6600" />
+	<look type="498" corpse="17424" />
+	<targetchange interval="4000" chance="10" />
+	<strategy attack="90" defense="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="0" />
+		<flag staticattack="70" />
+		<flag runonhealth="260" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" skill="50" attack="100" />
+		<attack name="poisoncondition" interval="2000" chance="10" target="0" radius="6" min="-460" max="-480">
+			<attribute key="shootEffect" value="poison" />
+			<attribute key="areaEffect" value="poison" />
+		</attack>
+		<attack name="ice" interval="2000" chance="15" target="0" length="7" spread="0" min="-260" max="-350">
+			<attribute key="shootEffect" value="ice" />
+			<attribute key="areaEffect" value="iceattack" />
+		</attack>
+		<attack name="earth" interval="2000" chance="20" target="1" radius="2" min="-180" max="-250">
+			<attribute key="shootEffect" value="greenstar" />
+			<attribute key="areaEffect" value="bigplants" />
+		</attack>
+		<attack name="speed" interval="2000" chance="10" target="0" length="5" spread="3" speedchange="-800" duration="30000">
+			<attribute key="areaEffect" value="yellowspark" />
+		</attack>
+	</attacks>
+	<defenses armor="35" defense="35">
+		<defense name="invisible" interval="2000" chance="20" duration="7000">
+			<attribute key="areaEffect" value="blueshimmer" />
+		</defense>
+	</defenses>
+	<voices interval="5000" chance="10">
+		<voice sentence="Clonk!" />
+		<voice sentence="Yowl!" />
+	</voices>
+	
+	<immunities>
+		<immunity earth="1" />
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<loot>
+		<item id="2148" countmax="100" chance="100000" />
+		<item id="2152" countmax="8" chance="100000" />
+		<item id="2150" countmax="3" chance="15020" />
+		<item id="2149" countmax="3" chance="10890" />
+		<item id="2156" chance="3510" />
+		<item id="2158" chance="480" />
+		<item id="5904" chance="830" />
+		<item id="2245" chance="620" />
+		<item id="2438" chance="480" />
+		<item id="7437" chance="480" />
+		</loot>
+</monster>

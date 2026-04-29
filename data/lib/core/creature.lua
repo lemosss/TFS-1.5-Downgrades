@@ -19,13 +19,17 @@ function Creature.getClosestFreePosition(self, position, maxRadius, mustBeReacha
 			end
 
 			local tile = Tile(checkPosition)
-			if tile and tile:getCreatureCount() == 0 and not tile:hasProperty(CONST_PROP_IMMOVABLEBLOCKSOLID) and
+			if tile:getCreatureCount() == 0 and not tile:hasProperty(CONST_PROP_IMMOVABLEBLOCKSOLID) and
 				(not mustBeReachable or self:getPathTo(checkPosition)) then
 				return checkPosition
 			end
 		end
 	end
 	return Position()
+end
+
+function Creature.getMonster(self)
+	return self:isMonster() and self or nil
 end
 
 function Creature.getPlayer(self)
@@ -105,7 +109,6 @@ function Creature:addSummon(monster)
 	summon:setDropLoot(false)
 	summon:setSkillLoss(false)
 	summon:setMaster(self)
-	summon:getPosition():notifySummonAppear(summon)
 
 	return true
 end
@@ -165,12 +168,5 @@ function Creature:addDamageCondition(target, type, list, damage, period, rounds)
 	end
 
 	target:addCondition(condition)
-	return true
-end
-
-function Creature:canAccessPz()
-	if self:isMonster() or (self:isPlayer() and self:isPzLocked()) then
-		return false
-	end
 	return true
 end

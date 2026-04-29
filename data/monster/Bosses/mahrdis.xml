@@ -42,7 +42,7 @@
 		</defense>
 	</defenses>
 	<summons maxSummons="4">
-		<summon name="fire elemental" chance="3000"/>
+		<summon name="fire elemental" chance="100"/>
 	</summons>
 	<elements>
 		<element firePercent="100"/>

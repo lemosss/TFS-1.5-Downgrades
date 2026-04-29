@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Orc Marauder" nameDescription="an orc marauder" race="blood" experience="205" speed="210" manacost="490">
+	<health now="235" max="235" />
+	<look type="342" corpse="11254" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="1" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="4" />
+		<flag staticattack="90" />
+		<flag runonhealth="0" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" min="0" max="-120" />
+		<attack name="physical" interval="2000" chance="50" range="7" min="0" max="-80">
+			<attribute key="shootEffect" value="onyxarrow" />
+		</attack>
+	</attacks>
+	<defenses armor="25" defense="25">
+		<defense name="speed" interval="2000" chance="15" speedchange="350" duration="5000">
+			<attribute key="areaEffect" value="redshimmer" />
+		</defense>
+	</defenses>
+	
+	<immunities>
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="Grrrrrr" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="90" chance="55000" />	
+		<item id="2666" chance="24600" />				
+		<item id="2456" chance="5210" />					
+		<item id="2428" chance="1320" />					
+		<item id="2425" chance="1110" />					
+		<item id="2455" chance="460" />					
+		</loot>
+</monster>

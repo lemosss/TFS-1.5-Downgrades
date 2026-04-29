@@ -39,7 +39,7 @@
 		</defense>
 	</defenses>
 	<summons maxSummons="3">
-		<summon name="hero" chance="1000" max="3"/>
+		<summon name="hero" chance="100" max="3"/>
 	</summons>
 	<elements>
 		<element earthPercent="100"/>

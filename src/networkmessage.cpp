@@ -107,7 +107,11 @@ void NetworkMessage::addItem(uint16_t id, uint8_t count)
 		addByte(count);
 	} else if (it.isSplash() || it.isFluidContainer()) {
 		addByte(fluidMap[count & 7]);
-	} else if (it.isRune()) {
+	} else if (it.isRune() && it.charges > 0) {
+		// Only runes with charges configured (UH/GFB/SD/...) ship a sub-type byte.
+		// Blank rune has charges=0 in items.xml and the 8.0 client.dat does not flag
+		// it as having a sub-type, so any extra byte here corrupts the next item
+		// in the packet (symptoms: soul=-1, BP won't open, black map).
 		addByte(it.charges);
 	}
 
@@ -127,7 +131,7 @@ void NetworkMessage::addItem(const Item* item)
 		addByte(std::min<uint16_t>(0xFF, item->getItemCount()));
 	} else if (it.isSplash() || it.isFluidContainer()) {
 		addByte(fluidMap[item->getFluidType() & 7]);
-	} else if (it.isRune()) {
+	} else if (it.isRune() && it.charges > 0) {
 		addByte(item->getCharges());
 	}
 

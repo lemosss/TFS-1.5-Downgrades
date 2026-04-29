@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Lost Berserker" nameDescription="a lost berserker" race="blood" experience="4400" speed="250" manacost="0">
+	<health now="5900" max="5900" />
+	<look type="496" corpse="17416" />
+	<targetchange interval="4000" chance="15" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="1" />
+		<flag staticattack="90" />
+		<flag runonhealth="0" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" skill="100" attack="91" />
+		<attack name="physical" interval="2000" chance="15" range="7" min="-0" max="-300">
+			<attribute key="shootEffect" value="whirlwindaxe" />
+		</attack>
+		<attack name="physical" interval="2000" chance="15" range="7" target="1" radius="3" min="-0" max="-250">
+			<attribute key="shootEffect" value="explosion" />
+			<attribute key="areaEffect" value="explosionarea" />
+		</attack>
+		<attack name="manadrain" interval="2000" chance="10" radius="5" target="0" spread="0" min="-150" max="-250">
+			<attribute key="areaEffect" value="redshimmer" />
+		</attack>
+		<attack name="speed" interval="2000" chance="10" radius="2" target="0" spread="0" speedchange="-800" duration="20000">
+			<attribute key="areaEffect" value="redshimmer" />
+		</attack>
+		<attack name="drunk" interval="2000" chance="10" target="1" radius="4" duration="6000">
+			<attribute key="areaEffect" value="stun" />
+		</attack>
+	</attacks>
+	<defenses armor="40" defense="40">
+		<defense name="invisible" interval="2000" chance="5" duration="3000">
+			<attribute key="areaEffect" value="teleport" />
+		</defense>
+	</defenses>
+	
+	<immunities>
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="Kill! Kill! Kill!" />
+		<voice sentence="Death! Death! Death!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="50000" />
+		<item id="2148" countmax="100" chance="50000" />
+		<item id="2152" countmax="9" chance="100000" />
+		<item id="2789" countmax="2" chance="15190" />
+		<item id="5880" chance="8490" />
+		<item id="2114" chance="3920" />
+		<item id="2529" chance="640" />
+		<item id="5904" chance="720" />
+		<item id="7452" chance="810" />
+		<item id="2515" chance="1400" />
+		<item id="2213" chance="2280" />
+		<item id="2430" chance="2070" />
+		<item id="7427" chance="550" />
+		<item id="2528" chance="1002" />
+		<item id="2432" chance="380" />
+		<item id="2498" chance="150" />
+	</loot>
+</monster>

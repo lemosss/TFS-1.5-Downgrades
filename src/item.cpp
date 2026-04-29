@@ -903,7 +903,11 @@ std::string Item::getDescription(const ItemType& it, int32_t lookDistance,
 			}
 
 			if (!it.runeSpellName.empty()) {
-				s << ". It's an \"" << it.runeSpellName << "\" spell (" << (item ? item->getCharges() : it.charges) << "x)";
+				// Use getSubType() so stackable runes show their stack count and
+				// non-stackable charged runes show their remaining charges.
+				// (item->getCharges() returns 0 for stackable runes since charges
+				// live in itemCount, not in ITEM_ATTRIBUTE_CHARGES.)
+				s << ". It's an \"" << it.runeSpellName << "\" spell (" << (item ? item->getSubType() : it.charges) << "x)";
 			}
 		}
 	} else if (it.weaponType != WEAPON_NONE) {

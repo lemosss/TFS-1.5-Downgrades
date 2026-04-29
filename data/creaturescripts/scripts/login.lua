@@ -22,7 +22,10 @@ function onLogin(player)
 			player:setVocation(promotion)
 		end
 	elseif not promotion then
-		player:setVocation(vocation:getDemotion())
+		local demotion = vocation:getDemotion()
+		if demotion and demotion:getId() ~= vocation:getId() then
+			player:setVocation(demotion)
+		end
 	end
 
 	-- Events

@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Stone Devourer" nameDescription="a stone devourer" race="undead" experience="2900" speed="250" manacost="0">
+	<health now="4200" max="4200" />
+	<look type="486" corpse="18375" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="0" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag staticattack="80" />
+		<flag lightlevel="0" />
+		<flag lightcolor="0" />
+		<flag targetdistance="1" />
+		<flag runonhealth="1" />
+	</flags>
+	<attacks>
+		<attack name="melee" interval="2000" skill="122" attack="150" />
+		<attack name="earth" interval="2000" chance="15" range="7" target="1" min="-230" max="-460">
+			<attribute key="shootEffect" value="smallearth" />
+			<attribute key="areaEffect" value="stones" />
+		</attack>
+		<attack name="physical" interval="2000" chance="15" range="7" target="1" min="-0" max="-650">
+			<attribute key="shootEffect" value="largerock" />
+		</attack>
+		<attack name="lifedrain" interval="2000" chance="15" target="0" length="5" spread="0" min="-150" max="-260">
+			<attribute key="areaEffect" value="stones" />
+		</attack>
+	</attacks>
+	<defenses armor="35" defense="35" />
+	
+	<voices interval="5000" chance="10">
+		<voice sentence="Rumble!" />
+	</voices>
+	<immunities>
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+		<immunity fire="1" />
+		<immunity earth="1" />
+	</immunities>
+	<loot>
+		<item id="2148" countmax="100" chance="100000" />
+		<item id="2152" countmax="7" chance="92000" />
+		<item id="7454" chance="3340" />
+		<item id="2213" chance="2840" />
+		<item id="2197" chance="2270" />
+		<item id="7437" chance="1490" />
+		<item id="7452" chance="1490" />
+		<item id="2454" chance="920" />
+		<item id="2445" chance="850" />
+		<item id="2393" chance="570" />
+	</loot>
+</monster>

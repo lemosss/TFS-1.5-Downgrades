@@ -956,7 +956,11 @@ class Item : virtual public Thing
 
 		static uint32_t countByType(const Item* i, int32_t subType) {
 			if (i->isRune()) {
-				return i->getSubType();
+				// Charge-bearing runes (UH/GFB/SD/...) count their remaining charges.
+				// Blank rune has no charges configured -> getSubType() == 0; count it
+				// as 1 physical item so removeItemOfType() can find it as a reagent.
+				const uint16_t charges = i->getSubType();
+				return charges > 0 ? charges : 1;
 			}
 
 			if (subType == -1 || subType == i->getSubType()) {

@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<monster name="Lost Husher" nameDescription="a lost husher" race="blood" experience="1800" speed="220" manacost="0">
+	<health now="1600" max="1600" />
+	<look type="537" corpse="19964" />
+	<targetchange interval="4000" chance="10" />
+	<flags>
+		<flag summonable="0" />
+		<flag attackable="1" />
+		<flag hostile="1" />
+		<flag illusionable="1" />
+		<flag convinceable="0" />
+		<flag pushable="0" />
+		<flag canpushitems="1" />
+		<flag canpushcreatures="1" />
+		<flag targetdistance="4" />
+		<flag staticattack="90" />
+		<flag runonhealth="0" />
+	</flags>
+	<attacks>
+		<attack name="physical" interval="2000" chance="10" length="6" spread="0" min="-150" max="-300">
+			<attribute key="areaEffect" value="blacksmoke" />
+		</attack>
+		<attack name="manadrain" interval="2000" chance="10" radius="5" target="0" spread="0" min="-150" max="-250">
+			<attribute key="areaEffect" value="blacksmoke" />
+		</attack>
+		<attack name="physical" interval="2000" chance="10" range="7" min="-150" max="-200">
+			<attribute key="shootEffect" value="death" />
+			<attribute key="areaEffect" value="smallclouds" />
+		</attack>
+		<attack name="earth" interval="2000" chance="10" range="7" target="1" radius="2" min="-150" max="-250">
+			<attribute key="shootEffect" value="smallearth" />
+			<attribute key="areaEffect" value="greenshimmer" />
+		</attack>
+		<attack name="drunk" interval="2000" chance="10" target="0" radius="4" duration="6000">
+			<attribute key="areaEffect" value="rednote" />
+		</attack>
+	</attacks>
+	<defenses armor="25" defense="25">
+		<defense name="healing" interval="2000" chance="15" min="75" max="92">
+			<attribute key="areaEffect" value="yellowenergy" />
+		</defense>
+		<defense name="invisible" interval="2000" chance="15" duration="5000">
+			<attribute key="areaEffect" value="teleport" />
+		</defense>
+	</defenses>
+	
+	<immunities>
+		<immunity earth="1" />
+		<immunity paralyze="1" />
+		<immunity invisible="1" />
+	</immunities>
+	<voices interval="5000" chance="10">
+		<voice sentence="Arr far zwar!" />
+	</voices>
+	<loot>
+		<item id="2148" countmax="100" chance="50000" />
+		<item id="2152" countmax="2" chance="58670" />
+		<item id="2789" countmax="2" chance="14920" />
+		<item id="2215" chance="2870" />
+		<item id="2515" chance="830" />
+		<item id="7452" chance="50" />
+		<item id="2528" chance="440" />
+		<item id="2436" chance="280" />
+		<item id="2432" chance="330" />
+		</loot>
+</monster>
