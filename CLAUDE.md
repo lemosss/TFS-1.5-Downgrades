@@ -1104,6 +1104,69 @@ like PK skull); fixed several depot-related bugs that were dating back since
 Day-5; reworked the create-shop picker into a sprite grid; locked walkthrough
 between players via a focused source patch.
 
+### Why we ditched the custom opcode for the icon
+
+The Player Shop originally drew its visual indicator (the little coin on the
+seller's head) via a custom extended opcode (`STATE_BROADCAST = 135`) on a
+3-second tick. The flow looked like:
+
+```
+Server tick (3s) → for every active shop → broadcast STATE pkt to specs
+Client onStateBroadcast(isOpen=1) → creature:setShield(1) + setShieldTexture(...)
+```
+
+Two real-world bugs followed from that design:
+
+1. **3-second visual lag when entering spec range**. A buyer who came up the
+   stairs / walked into view of a seller had to wait until the next tick fired
+   to see the icon. PK skull, by contrast, is instant because the server bakes
+   the skull byte into the `AddCreature` packet itself.
+
+2. **Conflict / cleanup pain**. Setting / clearing the shield slot via Lua
+   meant we had to manually restore the "real" shield (party shield, etc.)
+   when the shop closed, which sometimes raced or left stale icons.
+
+The clean fix was to ride on the protocol's existing skull byte — same
+mechanism PK uses — instead of hand-rolling our own broadcasting:
+
+```
+TFS protocol (7.72/8.0) AddCreature packet:
+  ...
+  uint8_t skullByte    ← server writes Player::getSkullClient(viewer) here
+  ...
+```
+
+By making `getSkullClient` return our new `SHOP_ICON = 7` whenever the
+target player is selling, every existing pathway that ships a skull update
+to a client (`AddCreature` on appear, `sendCreatureSkull` on change) just
+worked, instantly, with zero extra opcodes. The custom STATE_BROADCAST
+still exists, but it's now relegated to carrying the **shop text** (for
+the "Open Shop" menu hook on others, and locking `iAmSelling` on the
+seller's own client). Not on the critical path for the icon anymore.
+
+### The transition problem & `Game.updateCreatureSkull`
+
+There was one wrinkle: `getSkullClient` is only consulted by the server
+when it's writing a skull byte to send. The two trigger points are:
+- `AddCreature` (when a creature first appears in someone's spec range).
+- `sendCreatureSkull` (called from `Game::updateCreatureSkull`).
+
+If a player who's *already visible* opens or closes a shop, neither
+trigger fires automatically — the skull stays stale on every nearby
+client until the seller leaves and re-enters spec range. So we exposed
+`Game::updateCreatureSkull` to Lua and the shop's open/close handlers
+now call it explicitly:
+
+```lua
+player:setStorageValue(88810, 1)        -- mark as selling
+Game.updateCreatureSkull(player)        -- push the new skull to all specs
+```
+
+That single call iterates every spectator and ships a `sendCreatureSkull`
+packet, which makes every nearby client re-render the icon **on the same
+frame** the seller pressed "Iniciar Venda". Identical UX to a /look
+command turning into the green text — instant, native, no polling.
+
 ### Source patches (require rebuild)
 
 ```
@@ -1314,13 +1377,53 @@ server sends the new skull) loads `shop_icon.png` instead of leaving it blank.
 
 ### Outstanding (not blockers, future polish)
 
-- **Lista vazia sem filtro**: user reported some cases where the picker
-  shows blank until typing in the search. Mitigated by the deferred
-  `populatePickerList` + pcall around cell creation, but no F12 trace was
-  captured to confirm the root cause. If it returns, ask user for the
-  `[playershop]` debug prints from F12 to diagnose.
-- Bubble with shop text over the seller's head (still a no-op stub —
-  `Creature:getDrawOffset` returns wrong values during local player
-  walking).
+- **Persistent shop label above the seller's head** (the "balãozinho").
+  The user wants the shop text to float fixed over the character, the
+  same way the PK skull stays glued — no fade, no chat-history pollution.
+  The OTC v8 already supports this pattern via `StaticText.create()` +
+  `g_map.addThing(staticText, pos, -1)`, used by `console.lua` for
+  speak bubbles, but those StaticText widgets have a built-in C++ decay
+  timer (about 5s) and don't track the creature's position when she
+  walks. To make it truly native — drawn by the engine like the name
+  + skull do — we'd need:
+  1. Server source patch in `ProtocolGame::AddCreature` to append a
+     `string shopText` field to the creature packet (one new byte
+     header signaling the field's presence, then length-prefixed UTF-8).
+  2. Server source patch in `Game::updateCreatureShopText(creature)`
+     analogous to `updateCreatureSkull` so transitions push live.
+  3. **Client-side OTC v8 source patch** — currently the biggest
+     blocker. The repo at `Desktop/otclientv80` is the prebuilt 3.2
+     rev 4 release distribution; no `src/` is present. To touch the
+     C++ Creature renderer (which draws the name string above the
+     creature in `creature.cpp` `drawInformation`) we'd have to clone
+     `OTCv8/otclientv8` (or the `OTCv8/otcv8-dev` branch the user has
+     in `Desktop/OT/otcv8-dev`), apply a similar `drawShopText` pass,
+     and rebuild — non-trivial without proven build environment for
+     this fork.
+
+  **Lua-only fallback** that still hits the screen but with caveats:
+  in `playershop.lua onStateBroadcast(isOpen=1)` build a `StaticText`,
+  drop it on the creature's tile, and refresh it every ~3 seconds via
+  `cycleEvent` until the shop closes. Not "fixed" — the text reappears
+  each cycle, follows the creature poorly, and pollutes the chat tab
+  if the message goes through the speak system. We discussed this and
+  the user explicitly preferred the native route; deferring until the
+  client source-patch path is worth the effort.
+
+- **Lista vazia sem filtro**: this was a real issue earlier in the
+  session. Two stacked bugs caused it (see commit
+  `77f60ef playershop: real-time picker populate via onGeometryChange`):
+  (a) `g_keyboard.bindKeyPress('Return', ...)` raises an error on this
+  build of OTC v8 (`Return` key name not recognized → triggers
+  `connect(nil, ...)` in keyboard.lua:144), aborting `openItemPicker`
+  before `populatePickerList` was ever called on first open. The
+  `searchEdit.onTextChange` handler had been registered earlier in the
+  function and was the only path running the populate, hence the
+  "type to see items" symptom. Fix: dropped the Return/Enter keybinds.
+  (b) Even after that, the picker grid panel sometimes reported width=0
+  on its first frame, so cells fell at pos 0,0 and were invisible. Fix:
+  attach a `onGeometryChange` listener to the gridPanel and re-call
+  populatePickerList when the panel ends up with valid dimensions.
+  Resolved.
 - VIP list color sync — `Player:getVipList()` still not exposed.
 - Persistence across server restart — shops still die when server stops.
