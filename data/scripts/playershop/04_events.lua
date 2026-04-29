@@ -12,14 +12,18 @@ login:onLogin(function(player)
 end)
 login:register()
 
--- ---- onLogout: auto-close shop if seller logs out ----
+-- ---- onLogout: auto-close shop, devolve unsold items pro depot ----
+-- Pass `player` como sellerOverride: durante onLogout, Player(id) pode ja
+-- retornar nil mid-disconnection. PlayerShop_Close devolve via
+-- player:getDepotChest(...):addItem e o save automatico do engine
+-- (chamado depois que voltamos da hook Lua) persiste o depot.
 local logout = CreatureEvent("PlayerShopLogout")
 logout:type("logout")
 logout:onLogout(function(player)
     if PlayerShop_IsSelling(player:getId()) then
-        PlayerShop_Close(player:getId(), "Loja fechada (logout).")
+        PlayerShop_Close(player:getId(), "Loja fechada (logout).", player)
     end
-    return true  -- allow logout
+    return true
 end)
 logout:register()
 

@@ -44,7 +44,12 @@ local function eachDepot(player, fn)
     end
 end
 
+-- forward decl (used by findItemInDepot/cross-slot check before its definition).
+local isNonEmptyContainer
+
 -- Recursive depth-first search across ALL depots for the first matching itemId.
+-- Skips non-empty containers so we don't return a backpack-with-stuff when
+-- the seller asked to sell "an empty backpack".
 local function findItemInDepot(player, itemUid, itemId)
     if itemUid and itemUid ~= 0 then
         local it = Item(itemUid)
@@ -54,11 +59,12 @@ local function findItemInDepot(player, itemUid, itemId)
     end
     local function search(it)
         if not it then return nil end
-        if it:getId() == itemId then return it end
-        local container = it.getContainer and it:getContainer()
-        if container then
-            for i = 0, container:getSize() - 1 do
-                local found = search(container:getItem(i))
+        if it:getId() == itemId and not isNonEmptyContainer(it) then return it end
+        -- Item ja eh Container userdata se isContainer()=true neste TFS.
+        if ItemType(it:getId()):isContainer() then
+            local sz = it:getSize() or 0
+            for i = 0, sz - 1 do
+                local found = search(it:getItem(i))
                 if found then return found end
             end
         end
@@ -141,11 +147,16 @@ function PlayerShop_Open(player, payload)
         local have = 0
         local function visit(it)
             if not it then return end
-            if it:getId() == itemId then have = have + (it:getCount() or 1) end
-            local container = it.getContainer and it:getContainer()
-            if container then
-                for i = 0, container:getSize() - 1 do
-                    visit(container:getItem(i))
+            -- Containers nao-vazios nao contam como estoque vendavel
+            -- (mesma logica de findItemInDepot/removeFromDepots).
+            if it:getId() == itemId and not isNonEmptyContainer(it) then
+                have = have + (it:getCount() or 1)
+            end
+            -- Item com isContainer=true JA eh Container userdata.
+            if ItemType(it:getId()):isContainer() then
+                local sz = it:getSize() or 0
+                for i = 0, sz - 1 do
+                    visit(it:getItem(i))
                 end
             end
         end
@@ -174,42 +185,61 @@ function PlayerShop_Open(player, payload)
     -- depots (not inventory), this should pull from there.
     -- Fallback: if removeItem doesn't reach depot (build-specific), iterate
     -- depots manually.
+    -- Returns (ok, byDepotId) — byDepotId maps depotId -> count actually pulled
+    -- from that depot, so on close we can return to the right city's depot.
     local function removeFromDepots(itemId, qty)
         local left = qty
-        eachDepot(player, function(depot)
-            if left <= 0 then return end
-            local function strip(container)
-                if left <= 0 then return end
-                for i = container:getSize() - 1, 0, -1 do
+        local byDepotId = {}
+        for depotId = 1, 10 do
+            if left <= 0 then break end
+            local depot = player:getDepotChest(depotId, false)
+            if depot then
+                local function strip(container)
                     if left <= 0 then return end
-                    local it = container:getItem(i)
-                    if it then
-                        if it:getId() == itemId then
-                            local c = it:getCount() or 1
-                            if c <= left then
-                                it:remove()
-                                left = left - c
-                            else
-                                it:setCount(c - left)
-                                left = 0
+                    for i = container:getSize() - 1, 0, -1 do
+                        if left <= 0 then return end
+                        local it = container:getItem(i)
+                        if it then
+                            local idMatches = it:getId() == itemId
+                            local itype = ItemType(it:getId())
+                            local isCont = itype:isContainer()
+                            local hasContent = isCont and (it:getSize() or 0) > 0
+
+                            -- NUNCA remover container com conteudo. Mesmo que
+                            -- o id bata, descemos na recursao pra achar o
+                            -- item alvo dentro dele. Defesa em profundidade:
+                            -- checa via isCont+getSize direto aqui, em vez
+                            -- de depender so da funcao isNonEmptyContainer.
+                            if idMatches and not hasContent then
+                                local c = it:getCount() or 1
+                                local pulled = math.min(c, left)
+                                if c <= left then
+                                    it:remove()
+                                else
+                                    it:setCount(c - left)
+                                end
+                                left = left - pulled
+                                byDepotId[depotId] = (byDepotId[depotId] or 0) + pulled
+                            elseif isCont then
+                                -- Container (cheio ou nao do id certo): desce.
+                                strip(it)
                             end
-                        else
-                            local sub = it.getContainer and it:getContainer()
-                            if sub then strip(sub) end
                         end
                     end
                 end
+                strip(depot)
             end
-            strip(depot)
-        end)
-        return left == 0
+        end
+        return left == 0, byDepotId
     end
-    for _, e in pairs(items) do
-        if not removeFromDepots(e.itemId, e.count) then
+    for slot, e in pairs(items) do
+        local ok2, byDepotId = removeFromDepots(e.itemId, e.count)
+        if not ok2 then
             PlayerShop_Reject(player,
                 "Falha ao retirar itens do depot. Loja cancelada.")
             return false
         end
+        e.byDepotId = byDepotId  -- remember origin per slot for return-on-close
     end
 
     ActiveShops[player:getId()] = {
@@ -232,32 +262,89 @@ end
 -- Close shop (manually, on logout, on save, on stock empty, on timeout, etc.)
 -- reason: short string for the seller's MSG.
 -- ---------------------------------------------------------------------------
-function PlayerShop_Close(playerId, reason)
+function PlayerShop_Close(playerId, reason, sellerOverride, viaInventory)
     local shop = ActiveShops[playerId]
     if not shop then return end
     ActiveShops[playerId] = nil
 
-    local seller = Player(playerId)
+    -- During onLogout the player is mid-disconnection so Player(id) may
+    -- already return nil; allow callers to pass the live reference directly.
+    local seller = sellerOverride or Player(playerId)
     if seller then
-        -- Return any unsold stash items back to the seller's depot.
-        -- Use depotId 1 (Thais) as the default home depot.
-        local depot = seller:getDepotChest(1, true)
-        if depot then
+        -- Return unsold stash items.
+        --
+        -- IMPORTANT: at logout (viaInventory=true) we MUST drop into the
+        -- player's inventory, not the depot chest. The TFS save logic
+        -- (iologindata.cpp:797-846) only writes depot tables when
+        -- depotLockerMap[*]:needsSave() is true, but DepotChest::addItem
+        -- bypasses the locker's save flag (depotchest.cpp:58 / postAdd
+        -- skips the locker via getParent() returning grandparent). Result:
+        -- depot inserts at logout silently fail to persist. Inventory is
+        -- saved unconditionally (iologindata.cpp:786-795) so this works.
+        local ok, err = pcall(function()
             for _, e in pairs(shop.items or {}) do
                 if e.count and e.count > 0 then
-                    -- Game.createItem handles stackable count automatically.
-                    local newItem = Game.createItem(e.itemId, e.count)
-                    if newItem then
-                        if e.charges and e.charges > 0 then
-                            newItem:setSubType(e.charges)
+                    local itType = ItemType(e.itemId)
+                    if viaInventory then
+                        -- Stuff into player inventory; falls back to ground
+                        -- via TFS internal logic if cap is full.
+                        if itType:isStackable() then
+                            local left = e.count
+                            while left > 0 do
+                                local chunk = math.min(left, 100)
+                                seller:addItem(e.itemId, chunk)
+                                left = left - chunk
+                            end
+                        else
+                            local sub = (e.charges and e.charges > 0) and e.charges or 1
+                            for _ = 1, e.count do
+                                seller:addItem(e.itemId, sub)
+                            end
                         end
-                        if e.actionId and e.actionId > 0 then
-                            newItem:setActionId(e.actionId)
+                    else
+                        -- Each slot remembers byDepotId = { depotId -> originalCount }.
+                        -- Distribute remaining count proportionally across the original depots.
+                        local totalPulled = 0
+                        for _, c in pairs(e.byDepotId or {}) do totalPulled = totalPulled + c end
+                        if totalPulled <= 0 then totalPulled = e.count end
+
+                        local distributed = 0
+                        local order = {}
+                        for depotId, _ in pairs(e.byDepotId or {}) do order[#order + 1] = depotId end
+                        table.sort(order)
+                        if #order == 0 then order = { 1 } end  -- safety fallback to Thais
+
+                        for idx, depotId in ipairs(order) do
+                            local originalShare = (e.byDepotId and e.byDepotId[depotId]) or e.count
+                            local share = idx == #order
+                                and (e.count - distributed)
+                                or math.floor(e.count * originalShare / totalPulled)
+                            if share > 0 then
+                                local chest = seller:getDepotChest(depotId, true)
+                                if chest then
+                                    if itType:isStackable() then
+                                        local left = share
+                                        while left > 0 do
+                                            local chunk = math.min(left, 100)
+                                            chest:addItem(e.itemId, chunk)
+                                            left = left - chunk
+                                        end
+                                    else
+                                        local sub = (e.charges and e.charges > 0) and e.charges or 1
+                                        for _ = 1, share do
+                                            chest:addItem(e.itemId, sub)
+                                        end
+                                    end
+                                end
+                                distributed = distributed + share
+                            end
                         end
-                        depot:addItem(newItem)
                     end
                 end
             end
+        end)
+        if not ok then
+            print('[playershop] return items error: ' .. tostring(err))
         end
         seller:setStorageValue(PlayerShopConfig.storageKey, -1)
         seller:sendTextMessage(MESSAGE_INFO_DESCR, reason or "Loja fechada.")
@@ -474,40 +561,88 @@ end
 -- ---------------------------------------------------------------------------
 -- Send inventory snapshot to player for the create-shop window.
 -- ---------------------------------------------------------------------------
+-- Aggregate items the player has in their depots, summing counts of identical
+-- items so the picker shows "5x fireball rune" not 5 separate entries.
+-- Bind the forward-declared local (defined near top of file) to the real fn.
+--
+-- IMPORTANT API NOTE: this TFS 1.5 fork does NOT expose Item:getContainer().
+-- Instead, when ItemType:isContainer() returns true, the item userdata is
+-- ALREADY assigned the Container metatable (Container is registered as a
+-- subclass of Item in luascript.cpp:2287, and setItemMetatable assigns
+-- Container directly when item->getContainer() is non-null in C++).
+-- So we call Container methods (getSize, getItem) DIRECTLY on the item.
+isNonEmptyContainer = function(it)
+    if not it then return false end
+    local itype = ItemType(it:getId())
+    if not itype:isContainer() then return false end
+    return (it:getSize() or 0) > 0
+end
+
 function PlayerShop_SendInventoryList(player)
-    local items = {}
+    local agg = {}  -- key = itemId, value = {id, count, charges, name}
+
+    -- Cada visita esta em pcall. Erro num item especifico (ex: tipo
+    -- "exotico") nao deve abortar a listagem inteira.
     local function visit(it)
         if not it then return end
-        local id = it:getId()
-        if id ~= 2148 and id ~= 2152 and id ~= 2160 and id ~= 1987 and not ItemType(id):isContainer() then
-            -- skip coins and the empty bag itself; skip nested containers from listing themselves
-            items[#items + 1] = {
-                uid = it:getUniqueId(),
-                id = id,
-                count = it:getCount(),
-                charges = it:getCharges() or 0,
-                name = ItemType(id):getName() or "item",
-            }
-        end
-        local container = it.getContainer and it:getContainer()
-        if container then
-            for i = 0, container:getSize() - 1 do
-                visit(container:getItem(i))
+        local ok, err = pcall(function()
+            local id = it:getId()
+            local itype = ItemType(id)
+
+            -- Skip moedas (gold/plat/crystal).
+            if not (id == 2148 or id == 2152 or id == 2160) then
+                -- Containers (bp, bag, qualquer tipo) so entram na lista se
+                -- estiverem 100% vazios. A recursao continua sempre.
+                if not isNonEmptyContainer(it) then
+                    local cnt = it:getCount() or 1
+                    local charges = it:getCharges() or 0
+                    local key = id
+                    if agg[key] then
+                        agg[key].count = agg[key].count + cnt
+                    else
+                        agg[key] = {
+                            id = id,
+                            count = cnt,
+                            charges = charges,
+                            name = itype:getName() or "item",
+                        }
+                    end
+                end
             end
+
+            -- Recursar dentro do container pra listar os filhos.
+            -- Item com isContainer=true JA eh Container userdata.
+            if itype:isContainer() then
+                local sz = it:getSize() or 0
+                for i = 0, sz - 1 do
+                    visit(it:getItem(i))
+                end
+            end
+        end)
+        if not ok then
+            print('[playershop] visit error on item id=' ..
+                tostring(it and it:getId() or '?') .. ': ' .. tostring(err))
         end
     end
 
-    -- inventory slots 1..10 (head, neck, backpack, body, right, left, legs, feet, ring, ammo)
-    for slot = 1, 10 do
-        visit(player:getSlotItem(slot))
-    end
+    -- Walk all depots (towns 1..10).
+    eachDepot(player, function(depot)
+        local sz = depot:getSize() or 0
+        for i = 0, sz - 1 do
+            visit(depot:getItem(i))
+        end
+    end)
+
+    -- Convert map -> list
+    local items = {}
+    for _, e in pairs(agg) do items[#items + 1] = e end
 
     local payload = PlayerShop_PackU16(#items)
     for _, e in ipairs(items) do
         payload = payload
-               .. PlayerShop_PackU32(e.uid)
+               .. PlayerShop_PackU32(0)  -- uid unused (depot agg)
                .. PlayerShop_PackU16(e.id)
-               .. PlayerShop_PackU16(e.count)
+               .. PlayerShop_PackU16(math.min(e.count, 0xFFFF))
                .. PlayerShop_PackU16(e.charges)
                .. PlayerShop_PackStr(e.name)
     end
