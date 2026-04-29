@@ -23,18 +23,9 @@ logout:onLogout(function(player)
 end)
 logout:register()
 
--- Block ALL item movement while a shop is open: drops, inventory swaps,
--- depot transfers, anything. Simpler than tracking shop-item UIDs (which were
--- unreliable when getUniqueId()==0 for normal items).
-local ec = EventCallback
-ec.onMoveItem = function(self, item, count, fromPos, toPos, fromCylinder, toCylinder)
-    if self and ActiveShops[self:getId()] then
-        self:sendCancelMessage("Voce nao pode mover itens com a loja aberta.")
-        return false
-    end
-    return true
-end
-ec:register()
+-- onMoveItem block REMOVED: items in shops live in a virtual stash (pulled
+-- from the depot at open-time), NOT in inventory, so the seller can freely
+-- move/drop other items without affecting the shop.
 
 -- ---- tick: warp seller back if pushed; close shop if seller leaves PZ ----
 local tick = GlobalEvent("PlayerShopTick")

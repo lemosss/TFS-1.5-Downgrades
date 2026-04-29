@@ -35,26 +35,44 @@ end
 
 -- Check if a slot definition (from client) matches a real item the seller owns.
 -- Returns the matched Item* or nil.
-local function findItemInInventory(player, itemUid, itemId)
+-- Iterate all of the player's depot chests (towns 1..10). Returns each
+-- top-level depot Container; caller walks contents.
+local function eachDepot(player, fn)
+    for depotId = 1, 10 do
+        local d = player:getDepotChest(depotId, false)  -- false = don't auto-create
+        if d then fn(d) end
+    end
+end
+
+-- Recursive depth-first search across ALL depots for the first matching itemId.
+local function findItemInDepot(player, itemUid, itemId)
     if itemUid and itemUid ~= 0 then
         local it = Item(itemUid)
         if it and it:getHolder() and it:getHolder():getId() == player:getId() then
             return it
         end
     end
-    -- fallback: walk inventory looking for first matching id (for stackables)
-    for slot = 1, 10 do
-        local inv = player:getSlotItem(slot)
-        if inv then
-            if inv:getId() == itemId then return inv end
-            if ItemType(inv:getId()):isContainer() then
-                for _, sub in ipairs(inv:getItems()) do
-                    if sub:getId() == itemId then return sub end
-                end
+    local function search(it)
+        if not it then return nil end
+        if it:getId() == itemId then return it end
+        local container = it.getContainer and it:getContainer()
+        if container then
+            for i = 0, container:getSize() - 1 do
+                local found = search(container:getItem(i))
+                if found then return found end
             end
         end
+        return nil
     end
-    return nil
+    local out = nil
+    eachDepot(player, function(depot)
+        if out then return end
+        for i = 0, depot:getSize() - 1 do
+            local found = search(depot:getItem(i))
+            if found then out = found; return end
+        end
+    end)
+    return out
 end
 
 -- ---------------------------------------------------------------------------
@@ -89,9 +107,10 @@ function PlayerShop_Open(player, payload)
             PlayerShop_Reject(player, ("Quantidade invalida no slot %d."):format(slot))
             return false
         end
-        local realItem = findItemInInventory(player, itemUid, itemId)
+        local realItem = findItemInDepot(player, itemUid, itemId)
         if not realItem then
-            PlayerShop_Reject(player, ("Voce nao possui o item do slot %d."):format(slot))
+            PlayerShop_Reject(player,
+                ("Voce nao possui o item do slot %d no depot."):format(slot))
             return false
         end
         local realCount = realItem:getCount()
@@ -106,12 +125,39 @@ function PlayerShop_Open(player, payload)
             charges = realItem:getCharges() or 0,
             actionId = realItem:getActionId() or 0,
         }
-        seenIds[#seenIds + 1] = realItem:getId()
     end
 
     if #items == 0 then
         PlayerShop_Reject(player, "Loja vazia. Adicione pelo menos um item.")
         return false
+    end
+
+    -- Cross-slot stock check across the DEPOT only.
+    local advertisedById = {}
+    for _, e in pairs(items) do
+        advertisedById[e.itemId] = (advertisedById[e.itemId] or 0) + e.count
+    end
+    for itemId, totalNeeded in pairs(advertisedById) do
+        local have = 0
+        local function visit(it)
+            if not it then return end
+            if it:getId() == itemId then have = have + (it:getCount() or 1) end
+            local container = it.getContainer and it:getContainer()
+            if container then
+                for i = 0, container:getSize() - 1 do
+                    visit(container:getItem(i))
+                end
+            end
+        end
+        eachDepot(player, function(depot)
+            for i = 0, depot:getSize() - 1 do visit(depot:getItem(i)) end
+        end)
+        if totalNeeded > have then
+            local nm = ItemType(itemId):getName() or ('id ' .. itemId)
+            PlayerShop_Reject(player,
+                ("Voce nao tem %d %s no depot (so tem %d)."):format(totalNeeded, nm, have))
+            return false
+        end
     end
 
     local cleanText = sanitizeText(payload.text)
@@ -120,9 +166,51 @@ function PlayerShop_Open(player, payload)
         return false
     end
 
-    -- Movement is blocked entirely client-side (walk/turn/autoWalk patches in
-    -- otclientv80) plus an onTurn server check and a warp-back tick safety net.
-    -- No server-side paralyze needed.
+    -- Physically take the items OUT of the depot. Each shop entry's `count`
+    -- is the virtual stock now; on close, unsold counts are recreated in the
+    -- depot via player:getDepotChest(...):addItem.
+    -- We use removeItem(itemId, count, -1) over the whole player so it walks
+    -- depot too (subType -1 = any). Since at this point the items are in
+    -- depots (not inventory), this should pull from there.
+    -- Fallback: if removeItem doesn't reach depot (build-specific), iterate
+    -- depots manually.
+    local function removeFromDepots(itemId, qty)
+        local left = qty
+        eachDepot(player, function(depot)
+            if left <= 0 then return end
+            local function strip(container)
+                if left <= 0 then return end
+                for i = container:getSize() - 1, 0, -1 do
+                    if left <= 0 then return end
+                    local it = container:getItem(i)
+                    if it then
+                        if it:getId() == itemId then
+                            local c = it:getCount() or 1
+                            if c <= left then
+                                it:remove()
+                                left = left - c
+                            else
+                                it:setCount(c - left)
+                                left = 0
+                            end
+                        else
+                            local sub = it.getContainer and it:getContainer()
+                            if sub then strip(sub) end
+                        end
+                    end
+                end
+            end
+            strip(depot)
+        end)
+        return left == 0
+    end
+    for _, e in pairs(items) do
+        if not removeFromDepots(e.itemId, e.count) then
+            PlayerShop_Reject(player,
+                "Falha ao retirar itens do depot. Loja cancelada.")
+            return false
+        end
+    end
 
     ActiveShops[player:getId()] = {
         items     = items,
@@ -151,6 +239,26 @@ function PlayerShop_Close(playerId, reason)
 
     local seller = Player(playerId)
     if seller then
+        -- Return any unsold stash items back to the seller's depot.
+        -- Use depotId 1 (Thais) as the default home depot.
+        local depot = seller:getDepotChest(1, true)
+        if depot then
+            for _, e in pairs(shop.items or {}) do
+                if e.count and e.count > 0 then
+                    -- Game.createItem handles stackable count automatically.
+                    local newItem = Game.createItem(e.itemId, e.count)
+                    if newItem then
+                        if e.charges and e.charges > 0 then
+                            newItem:setSubType(e.charges)
+                        end
+                        if e.actionId and e.actionId > 0 then
+                            newItem:setActionId(e.actionId)
+                        end
+                        depot:addItem(newItem)
+                    end
+                end
+            end
+        end
         seller:setStorageValue(PlayerShopConfig.storageKey, -1)
         seller:sendTextMessage(MESSAGE_INFO_DESCR, reason or "Loja fechada.")
         PlayerShop_BroadcastState(seller, false)
@@ -288,14 +396,6 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
         return false
     end
 
-    -- Find the actual item on the seller (uid first, else by id).
-    local realItem = findItemInInventory(seller, entry.itemUid, entry.itemId)
-    if not realItem then
-        PlayerShop_Reject(buyer, "Estoque invalido (vendedor sem o item).")
-        shop.items[slot] = nil  -- prune
-        return false
-    end
-
     -- ----- DEBIT BUYER -----
     local fromBp = math.min(bpMoney, total)
     local fromBank = total - fromBp
@@ -308,7 +408,6 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
     if fromBank > 0 then
         local newBank = (buyer:getBankBalance() or 0) - fromBank
         if newBank < 0 then
-            -- rollback bp
             buyer:addMoney(fromBp)
             PlayerShop_Reject(buyer, "Falha no banco.")
             return false
@@ -316,38 +415,28 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
         buyer:setBankBalance(newBank)
     end
 
-    -- ----- TRANSFER ITEM -----
-    -- Stackable: split if needed. Non-stackable: just move the whole item.
+    -- ----- TRANSFER ITEM (from virtual stash, NOT seller's inventory) -----
+    -- Items were taken out of the depot at PlayerShop_Open time and now live
+    -- only in the shop entry's `count`. We just create a fresh item for the
+    -- buyer with the same id/charges and decrement entry.count.
     local itType = ItemType(entry.itemId)
     local newItem
     if itType:isStackable() then
-        -- split
-        local oldCount = realItem:getCount()
-        if qty == oldCount then
-            -- move whole stack: remove from seller, give to buyer
-            realItem:remove()
-            newItem = buyer:addItem(entry.itemId, qty)
-        else
-            realItem:setCount(oldCount - qty)
-            newItem = buyer:addItem(entry.itemId, qty)
-        end
+        newItem = buyer:addItem(entry.itemId, qty)
     else
         if qty ~= 1 then
             PlayerShop_Reject(buyer, "Item nao-stackable so pode ser comprado em qty=1.")
-            -- rollback gold
             buyer:addMoney(fromBp)
             buyer:setBankBalance((buyer:getBankBalance() or 0) + fromBank)
             return false
         end
-        -- preserve charges on non-stackables (runes etc)
-        local subType = realItem:getSubType()
-        realItem:remove()
-        newItem = buyer:addItem(entry.itemId, subType > 0 and subType or 1)
+        -- preserve charges on non-stackables (UH/GFB charges live in subType)
+        local sub = entry.charges and entry.charges > 0 and entry.charges or 1
+        newItem = buyer:addItem(entry.itemId, sub)
     end
 
     if not newItem then
-        -- ROLLBACK (item was removed but addItem failed: cap full)
-        buyer:addItem(entry.itemId, qty)  -- best effort
+        -- ROLLBACK (addItem failed -> cap full)
         buyer:addMoney(fromBp)
         buyer:setBankBalance((buyer:getBankBalance() or 0) + fromBank)
         PlayerShop_Reject(buyer, "Sua bag esta cheia. Compra cancelada.")
@@ -400,9 +489,10 @@ function PlayerShop_SendInventoryList(player)
                 name = ItemType(id):getName() or "item",
             }
         end
-        if ItemType(id):isContainer() then
-            for _, sub in ipairs(it:getItems()) do
-                visit(sub)
+        local container = it.getContainer and it:getContainer()
+        if container then
+            for i = 0, container:getSize() - 1 do
+                visit(container:getItem(i))
             end
         end
     end

@@ -896,3 +896,199 @@ fails to load. Use `#444444`, `#dddddd`. Cost an evening of confused debugging.
 - `iAmSelling` reset on both `onGameStart` and `onGameEnd` (paranoid defensive).
 - Hailstorm Fury mount typo fix from earlier in the day shipped in commit
   `0ad745d3` — completely unrelated to player shop, just happened in same day.
+
+---
+
+## 13. Day-6 — Player Shop polish + UI rework + stock validation
+
+Today's session continued where Day-5 left off. The end-state is a player
+shop that's actually usable.
+
+### Server side
+
+#### Cross-slot stock validation (`02_core.lua` `PlayerShop_Open`)
+Without this, a seller with 5 fireball runes could declare slot 1 = 5 + slot 2 = 5.
+Each slot's per-call cap to `realItem:getCount()` succeeds (both see the same
+stack of 5), but the total is 10 > 5. Buyers get the rejection at buy-time but
+the shop is misleading.
+
+Now: **sums advertised count per itemId across all slots** and walks the entire
+inventory (slots 1-10 + recursive container descent) to count what the player
+actually has. If totalNeeded > have, rejects with
+`"Voce nao tem N <name> (so tem M)."`
+
+#### Recursive `findItemInInventory`
+Was descending only one level into containers. A rune in a BP-inside-a-BP would
+fail validation. Now walks the full container tree.
+
+#### `onMoveItem` actually blocks now
+- `data/events/events.xml`: `<event class="Player" method="onMoveItem" enabled="1" />`
+  (was `0`). Without enabling, the engine doesn't dispatch the event so neither
+  the events.xml-style handler nor the EventCallback chain fires.
+- `data/events/scripts/player.lua` `Player:onMoveItem`: explicit
+  `if ActiveShops[self:getId()]` check returns false. Belt-and-suspenders with
+  the `EventCallback` already in `04_events.lua`.
+
+#### `PlayerShop_Reject` resyncs selling state
+After every reject the server now sends a STATE_BROADCAST with the player's
+TRUE selling state (selling/not-selling + text if open). Without this, the
+client's optimistic `iAmSelling = true` (set in `commitCreateShop` after sending
+OPCODE_OPEN) would get RESET to false by the old `onReject` handler, and a
+player who already has a shop active would briefly walk free for ~2s while the
+warp-back tick caught up. Now the client trusts STATE_BROADCAST exclusively.
+
+### Client side (`otclientv80/modules/game_playershop/`)
+
+#### Shop icon (settled)
+- `setShield(1)` + `setShieldTexture('/images/game/slots/coins')`. The Shield
+  slot renders next to the creature's name (matches the Miracle reference image).
+- Tried `setEmblemTexture` first — that slot renders at body-level on this
+  build. Tried `setIconTexture`/`setTypeTexture` — wrong positions or no render.
+- Tried a custom `ShopBubble` UIWidget child of the map panel positioning via
+  `creature:getInformationPosition()`/`getDrawOffset()`. Math was off when the
+  local player walks (camera interpolation). Disabled — kept the code in
+  `updateBubblePositions` as a no-op for future work.
+- `creature:setShield(0)` on close clears the slot. **NEVER** call
+  `setEmblemTexture('')` or `setShieldTexture('')` — engine tries to load
+  `'.png'` and crashes.
+
+#### Create-Shop UI rework
+- One slot rendered initially. `+ adicionar item` button below adds up to 20.
+  Clicking the X on a slot destroys that row; window keeps a single empty slot
+  if all are removed.
+- Item picker is now cursor-grab (same UX as `game_hotkeys` "use with"):
+  click slot → cursor turns into the target arrow → click any item in
+  inventory/BP → that item is captured. No popup window.
+- Layout fixes:
+  - `Texto da loja:` margin-top 30 → 4.
+  - `Summary` label: `text-auto-resize: true` + `text-wrap: true` so
+    "1 itens, valor total: X" doesn't get clipped on the right.
+  - **Scrollbar moved to its own column** anchored to `parent.right`; the
+    `slotsPanel` ends at `scrollBar.left` with 4px margin. Slot rows fit
+    cleanly without their X buttons being eaten by the scrollbar.
+  - OTUI hex colours: `#444` and `#ddd` (3-digit) crash the OTML parser with
+    `failed to cast node value '#444' to type 'class Color'`. Use 6-digit
+    everywhere (`#444444`, `#dddddd`).
+
+#### Stackable count picked up properly
+`item:getCount()` returns 1 even for stackable stacks of 3 in this build. Fix:
+when capturing the item via cursor-grab, also read `clickedWidget:getItemCount()`
+(the visible stack count from the source UIItem widget) and `item:getSubType()`
+(stackable count is in subType for 8.0 protocol). Use `max(widgetCount,
+item:getCount(), subType)`. Now a click on a stack of 3 captures all 3.
+
+Same item is **allowed** in multiple slots (the seller may have several stacks
+they want to list separately). Cross-slot stock validation server-side prevents
+overselling.
+
+#### Removed game_actionbar / game_bot / game_healthinfo from interface.otmod
+Those modules were deleted from this otclientv80 setup earlier (by the user).
+With them in the `load-later:` list, every boot threw 3 red errors:
+- `Unable to find module 'game_actionbar' required by 'game_interface'`
+- `Unable to find module 'game_bot' required by 'game_interface'`
+- `attempt to index field 'game_healthinfo'` in
+  `client_options/options.lua:392, :283, :326`.
+
+Now removed from `interface.otmod` and the matching options.lua references are
+defensive (nil-check before `.show()` / `.healthCircle:setVisible(...)` /
+`.topHealthBar:setVisible(...)`).
+
+### Right-click menu — final final
+Two categories `playershop_a_create` (own char → create window) and
+`playershop_b_view` (other selling player → buy window). Sorted-key iteration
+in `gameinterface.lua` ensures deterministic order; categories with all
+conditions returning false also have their separator skipped now (so plain
+ground/empty right-click doesn't show empty separator strips).
+
+### Chat allowlist — final
+Only `!fecharloja`, `!lojas`, `/shop`, and `/shop *` pass while selling. Any
+other message: red failure msg "Voce so pode digitar !fecharloja enquanto a
+loja esta aberta." (in `console.lua sendCurrentMessage`).
+
+Earlier I had hooks on `g_game.talkChannel`/`talkPrivate`/`talk` that blocked
+ALL chat including commands. Removed — `console.lua sendCurrentMessage` is the
+only entry point we need. Don't re-add the g_game hooks; they over-block.
+
+### Message colour conventions — final
+- Green (`MESSAGE_INFO_DESCR` → `centerGreen` via the §7c client patch):
+  - "Loja aberta. Voce nao pode se mover ate fechar." (info on success)
+  - "Loja fechada." (info on close, all variants)
+- Red (REJECT opcode → `displayBroadcastMessage` → `centerRed` via
+  `MessageModes.Warning`):
+  - All blocking messages from server-side `PlayerShop_Reject` calls
+- White at bottom (`displayFailureMessage` → `statusSmall`):
+  - Client-side validation failures (chat allowlist, missing title client-pre-check)
+
+`onReject` does NOT use `displayPrivateMessage` (lightblue → top, looks like
+PM). Was the source of the "blue at top" bug earlier.
+
+### Commits today
+- Realera (`lemosss/TFS-1.5-Downgrades` branch `8.0`):
+  - `cc9c2cd5` — playershop polish + buyer PZ enforcement
+  - (this CLAUDE.md update will be its own commit)
+- otclientv80 (`lemosss/otclientv8` branch `master`):
+  - `3359c5b` — initial PlayerShop module + interface patches
+  - `3b7db71` — shop icon as creature shield texture
+  - `589f555` — cleaner Create-Shop UI
+
+### MAJOR REFACTOR end-of-day: depot-backed shop stash
+
+The shop now uses **the seller's depot as the source** instead of the
+inventory:
+
+- `PlayerShop_Open` walks all `player:getDepotChest(townId, false)` for
+  towns 1..10 (`eachDepot` helper), runs the same recursive
+  `findItemInDepot` search, validates cross-slot stock against depot
+  totals, then **physically removes the items from the depot** (down to
+  the requested count, splitting stacks via `setCount`).
+- `ActiveShops[playerId].items[slot]` becomes a virtual stash:
+  `{ itemId, count, price, charges, actionId }` only. No live engine
+  Item reference. The actual items no longer exist anywhere on the
+  player while the shop is open.
+- `PlayerShop_Buy` now creates a fresh item via `buyer:addItem(itemId,
+  qty)` (or `addItem(itemId, charges)` for charged non-stackables like
+  UH/GFB) and decrements `entry.count`. No more `findItemInInventory`
+  on the seller.
+- `PlayerShop_Close` recreates whatever is left in the seller's
+  **default depot (town 1, Thais)** via `Game.createItem(itemId, count)`
+  + `setSubType(charges)` + `setActionId(actionId)` +
+  `depot:addItem(item)`. Items return to the depot regardless of which
+  town's depot they originally came from.
+- Charges/actionId of NON-stackable items are preserved across the
+  open→close cycle. Custom XML attributes (gem imbues, custom_text)
+  are NOT preserved by `Game.createItem` — fungible items only.
+- Backed off the `onMoveItem` blocks (both in `events/scripts/player.lua`
+  and in `04_events.lua`'s `EventCallback`) — items are no longer in
+  inventory, so the seller can freely move/drop other things while the
+  shop is open. The seller is still movement-locked at one tile so
+  buyers can find them.
+
+`PlayerShop_SendInventoryList` (the OPCODE_INVENTORY_LIST response that
+populates the create-shop window's picker) is technically unused now in
+the new flow — the client-side cursor-grab pattern picks any UIItem the
+user clicks (including depot UI items). Server validates against depot.
+Old function kept around in case we revive a depot list popup.
+
+### Open threads / next session
+- **Bubble widget over creature head** still disabled. Math went off during
+  local-player walk (camera interpolation isn't accounted for). Would need
+  either `Creature:getDrawOffset()` to be exposed correctly OR a different
+  positioning API. Code is in `playershop.lua updateBubblePositions` as a
+  no-op stub for now.
+- **`Player:getVipList()` not exposed** in this TFS build. VIP list gold-color
+  + icon when a VIP entry opens shop is wired client-side but the server can't
+  iterate VIPs to push targeted STATE_BROADCASTs to watchers. Would need either
+  a small C++ binding or a SQL-side query.
+- **Tibia.dat / Tibia.spr** show as modified in `otclientv80` git but I haven't
+  committed those. Earlier note in §7 covered the OldServ-vs-vanilla swap; the
+  current state may have been touched by the user during the session. If
+  there's a desired final state, decide and commit separately.
+- **Custom item attributes lost** on shop close (depot reinsertion). Fungible
+  items (charges, count, actionId) are preserved; custom string attrs and
+  imbues are not. Acceptable for now since the server doesn't have many such
+  items.
+- **Multiple-town depots merge on return**: items returned to depot id 1
+  regardless of where they came from. Could store `originDepotId` on the shop
+  entry to return precisely. Low priority.
+- **Persistence** — shops still don't survive a server restart (intentional —
+  per §10's spec section 6). Reopen manually after save.

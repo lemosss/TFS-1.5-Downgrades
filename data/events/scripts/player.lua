@@ -82,6 +82,9 @@ function Player:onLookInShop(itemType, count)
 end
 
 function Player:onMoveItem(item, count, fromPosition, toPosition)
+	-- Items in player shops live in a virtual stash (taken from the depot at
+	-- open time), not the inventory, so the seller can move other items
+	-- normally. No need to block here anymore.
 	return true
 end
 
