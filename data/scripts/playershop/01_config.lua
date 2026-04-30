@@ -8,7 +8,7 @@
 PlayerShopConfig = {
     maxShopDuration       = 8 * 60 * 60,       -- 8h
     maxItemsPerShop       = 20,
-    maxShopTextLength     = 44,                -- 22 * 2 (duas linhas no title)
+    maxShopTextLength     = 45,                -- ate 22 chars/linha, max 2 linhas
     minItemPrice          = 1,
     maxItemPrice          = 1000000000,        -- 1kkk
     bubbleStyle           = "ShopBubble",
