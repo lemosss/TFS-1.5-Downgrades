@@ -64,6 +64,9 @@ tick:onThink(function()
         end
     end
     -- Buyer left PZ -> force-close their shop view.
+    -- Tambem: se o comprador andou pra mais de 1 SQM do vendedor,
+    -- a janela tem que fechar (mesmo limite usado pra abrir). Reject
+    -- com texto generico; o cliente fecha automaticamente via onReject.
     for buyerId, sellerId in pairs(OpenShopWindows) do
         local buyer = Player(buyerId)
         if not buyer then
@@ -71,6 +74,19 @@ tick:onThink(function()
         elseif not PlayerShop_TileIsPZ(buyer:getPosition()) then
             PlayerShop_Reject(buyer, "Voce saiu da zona protegida. Loja fechada.")
             OpenShopWindows[buyerId] = nil
+        else
+            local seller = Player(sellerId)
+            if not seller then
+                OpenShopWindows[buyerId] = nil
+            else
+                local bp, sp = buyer:getPosition(), seller:getPosition()
+                local dist = (bp.z ~= sp.z) and 99
+                    or math.max(math.abs(bp.x - sp.x), math.abs(bp.y - sp.y))
+                if dist > 1 then
+                    PlayerShop_Reject(buyer, "Voce se afastou do vendedor. Loja fechada.")
+                    OpenShopWindows[buyerId] = nil
+                end
+            end
         end
     end
     return true
