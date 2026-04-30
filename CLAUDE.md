@@ -1420,3 +1420,137 @@ server sends the new skull) loads `shop_icon.png` instead of leaving it blank.
   Resolved.
 - VIP list color sync — `Player:getVipList()` still not exposed.
 - Persistence across server restart — shops still die when server stops.
+
+---
+
+## 15. Day-8 — Per-rune stack cap + drag-drop UX + blank rune NPC sale
+
+### Problem 1 — Rune stacks could grow past their `<charges>` cap
+Realera ships runes flagged `FLAG_STACKABLE` in `items.otb`, so multiple casts
+or manual drag-merge between BPs could pile a single slot well beyond the
+spec'd charges (e.g., a 4-stack of GFB merged with another 4-stack → 8-stack
+in one slot). Per-rune cap was never enforced; the engine fell back to the
+generic `100` stack max baked all over the inventory code.
+
+**Fix** — hardcoded `100` replaced with a per-item lookup. Added an inline
+helper on `Item`:
+
+```cpp
+// src/item.h, after getItemCount/setItemCount
+uint32_t getStackMax() const {
+    const ItemType& it = items[id];
+    if (it.isRune() && it.charges > 0) {
+        return it.charges;          // SD=1, UH=1, GFB=4, HMM=10, WG=2, ...
+    }
+    return 100;                     // gold/spear/arrow/etc unchanged
+}
+```
+
+12 sites of literal `100` switched to `someItem->getStackMax()`:
+- `src/container.cpp` lines 370/372 (queryMaxCount loop), 378/380
+  (queryMaxCount specific index), 481 (autoStack same-slot match), 488
+  (autoStack list scan), and the `freeSlots * 100` term on line 386
+  → `freeSlots * item->getStackMax()`.
+- `src/game.cpp` lines 1210 (`internalMoveItem` merge cap) and 1322
+  (`internalAddItem` merge cap).
+- `src/player.cpp` lines 2590/2591 (queryMaxCount inventory loop), 2599
+  (`if (item->isStackable()) n += 100;` empty-slot count), 2616/2617
+  (queryMaxCount specific slot).
+
+After rebuild, server refuses any add that would push a rune past
+`it.charges`. Manual drag-merge of 4-stack onto another 4-stack of GFB now
+goes into a free slot instead of mashing into 8.
+
+**Pitfall to remember**: don't grep `100` blindly — most hits are the
+"% out of 100" / weight-1g threshold / loot chance / etc. Look for the
+specific patterns `100 - .*itemCount` and `getItemCount() < 100`.
+
+### Problem 2 — Drag-drop sent count=1 for runes (1 rune at a time)
+Two layers of mismatch in the 8.0 client:
+1. The 8.0 `Tibia.dat` flags runes as **charge** items, not stackable. So
+   the OTC `item:getCount()` always returns 1 for runes regardless of how
+   tall the visible stack is. The visible byte (server stack size) lives
+   in `item:getCountOrSubType()`.
+2. The default OTC drag handlers gate the count-prompt on `getCount() > 1`,
+   so for runes it skipped the prompt **and** sent count=1 to the server.
+   Net result: drop a 5-stack on the floor → only 1 rune leaves.
+
+**Fix** — `otclientv80/modules/gamelib/ui/uiitem.lua` and
+`otclientv80/modules/game_interface/widgets/uigamemap.lua`:
+
+```lua
+local id = item:getId()
+if id >= 3147 and id <= 3203 then
+    -- 8.0 client.dat rune range (server ids 2260-2316). Runes drop /
+    -- move as whole stacks, no quantity prompt.
+    local stack = item:getCountOrSubType()
+    if stack < 1 then stack = 1 end
+    g_game.move(item, toPos, stack)
+elseif item:getCount() > 1 then
+    modules.game_interface.moveStackableItem(item, toPos)   -- existing prompt
+else
+    g_game.move(item, toPos, 1)
+end
+```
+
+Other stackables (gold 3031, spear 2389/clientId 3277, arrow, etc.) keep
+the original prompt-based path.
+
+**Sprite-id range derivation** — needed because OTC's `Item:getId()`
+returns the **dat clientId**, not the items.otb serverId. Used the existing
+`parse_otb.py` to walk every `(serverId, clientId)` pair where
+`2260 <= serverId <= 2316` (the entire rune block in items.xml) and read
+off min/max client id → 3147..3203. Verified against live drag traces
+captured via debug `print()` (e.g. fireball server 2302 → client 3189,
+explosion 2313 → 3200).
+
+### Problem 3 — Blank rune wasn't sold by anyone
+NPC sale stripped earlier (see day-7 cleanup). Re-enabled only blank rune
+across NPCs that share `data/npc/scripts/runes.lua` (Eryn, Rachel, Xodet
+in this server). One uncomment in `runes.lua` is enough — every NPC whose
+XML has `script="runes.lua"` picks it up:
+
+```lua
+shopModule:addBuyableItem({'blank rune', 'blank'}, 2260, 10, 1, 'blank rune')
+```
+
+10 gp each. Other rune sales (SD, UH, GFB, …) stayed commented — players
+still get them only by conjuring.
+
+### Side-quest: discovered the 12-NPCs-share-Xodet.lua trap
+While debugging Xodet's broken trade, learned that `Frans.xml`,
+`Rachel.xml`, `Topsy.xml`, `Xodet.xml`, `Asima.xml`, `Chuckles.xml`,
+`Fenech.xml`, `Frederik.xml`, `Romir.xml`, `Shiriel.xml`, `Sigurd.xml`,
+`Tandros.xml` ALL declare `script="Xodet.lua"`. The sibling files
+`Frans.lua`, `Rachel.lua`, `topsy.lua` exist on disk but **no XML
+references them** — orphan code. Editing `Frans.lua` to add a shop entry
+silently does nothing.
+
+**Lesson**: before editing a per-NPC `.lua`, always grep
+`grep -l 'script="<NPC>.lua"' data/npc/*.xml` to confirm anything actually
+loads it. Don't trust filename = NPC.
+
+(Note: in **this** Realera server, the equivalent group of NPCs uses
+`runes.lua`, not `Xodet.lua`. The 12-NPCs trap is from the parallel
+`OT/TFS-1.5-Downgrades` tree; mirrored the lesson here because the same
+search-for-the-real-script pattern applies.)
+
+### Files touched
+
+Realera TFS 1.5 (this repo):
+- `src/item.h` — `getStackMax()` helper
+- `src/container.cpp`, `src/game.cpp`, `src/player.cpp` — replace 12x `100`
+- `data/npc/scripts/runes.lua` — uncomment blank rune buyable
+
+`C:\Users\Lemos\Desktop\otclientv80\` (the matching client repo —
+`lemosss/otclientv8` master):
+- `modules/gamelib/ui/uiitem.lua`
+- `modules/game_interface/widgets/uigamemap.lua`
+
+### Open thread
+
+- **Open Shop (player shop) sprite mismatch** — user reports backpack
+  rendering as a stone coffin in the shop window. Likely an items.otb ↔
+  Tibia.dat clientId desync for backpack items, OR the player shop UI
+  passes the wrong id (server vs client) to a sprite render call. Not
+  investigated yet; pending a concrete repro item id.

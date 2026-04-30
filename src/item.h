@@ -954,6 +954,17 @@ class Item : virtual public Thing
 			count = n;
 		}
 
+		// Maximum stack count for this item type. Default stackables cap at 100;
+		// stackable runes cap at their items.xml `charges` value (so SD with
+		// charges=1 cannot stack, GFB with charges=4 caps at 4, etc.).
+		uint32_t getStackMax() const {
+			const ItemType& it = items[id];
+			if (it.isRune() && it.charges > 0) {
+				return it.charges;
+			}
+			return 100;
+		}
+
 		static uint32_t countByType(const Item* i, int32_t subType) {
 			if (i->isRune()) {
 				// Charge-bearing runes (UH/GFB/SD/...) count their remaining charges.
