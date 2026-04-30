@@ -462,9 +462,12 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
     payload = payload .. PlayerShop_PackU8(n)
     for slot, entry in pairs(shop.items) do
         local it = ItemType(entry.itemId)
+        -- Send clientId so the OTC widget's setItemId renders the correct
+        -- sprite from Tibia.dat. Server-side we keep tracking entry.itemId
+        -- (server id) by slot, the buyer only echoes the slot back to buy.
         payload = payload
                .. PlayerShop_PackU8(slot)
-               .. PlayerShop_PackU16(entry.itemId)
+               .. PlayerShop_PackU16(it:getClientId())
                .. PlayerShop_PackU16(entry.count)
                .. PlayerShop_PackU32(entry.price)
                .. PlayerShop_PackU16(entry.charges or 0)
@@ -699,9 +702,12 @@ function PlayerShop_SendInventoryList(player)
 
     local payload = PlayerShop_PackU16(#items)
     for idx, e in ipairs(items) do
+        -- Send clientId for rendering. Server keeps the server-id mapping
+        -- via the entry index (idx), so the picker's "select" callback can
+        -- still resolve the right depot item.
         payload = payload
                .. PlayerShop_PackU32(idx)               -- entry index (virtual uid)
-               .. PlayerShop_PackU16(e.id)
+               .. PlayerShop_PackU16(ItemType(e.id):getClientId())
                .. PlayerShop_PackU16(math.min(e.count, 0xFFFF))
                .. PlayerShop_PackU16(e.charges)
                .. PlayerShop_PackU8(e.stackable and 1 or 0)
