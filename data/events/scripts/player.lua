@@ -93,12 +93,6 @@ function Player:onMoveCreature(creature, fromPosition, toPosition)
 end
 
 function Player:onTurn(direction)
-    -- Block turning while a player shop is open.
-    if ActiveShops and ActiveShops[self:getId()] then
-        self:sendCancelMessage("Voce nao pode virar com a loja aberta.")
-        return false
-    end
-
     if self:getGroup():getAccess() and self:getDirection() == direction then
         local nextPosition = self:getPosition()
         nextPosition:getNextPosition(direction)

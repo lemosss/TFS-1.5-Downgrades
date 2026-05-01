@@ -27,25 +27,25 @@ end
 
 -- Validate that a player is in PZ, no battle, no skull, no other shop, not in trade.
 local function canOpenShop(player)
-    if not player then return false, "Player invalido." end
+    if not player then return false, "Invalid player." end
     if PlayerShop_IsSelling(player:getId()) then
-        return false, "Voce ja tem uma loja aberta."
+        return false, "You already have a shop open."
     end
     if not PlayerShop_TileIsPZ(player:getPosition()) then
-        return false, "Voce precisa estar em zona protegida."
+        return false, "You must be in a protection zone."
     end
     if player:getCondition(CONDITION_INFIGHT) then
-        return false, "Voce esta em battle. Saia do combate primeiro."
+        return false, "You are in battle. Leave combat first."
     end
     local skull = player:getSkull()
     if skull == SKULL_WHITE then
-        return false, "Voce esta com white skull (PK). Nao pode abrir loja."
+        return false, "You have a white skull (PK). Can't open a shop."
     end
     if skull == SKULL_RED then
-        return false, "Voce esta com red skull (PK). Nao pode abrir loja."
+        return false, "You have a red skull (PK). Can't open a shop."
     end
     if skull == SKULL_BLACK then
-        return false, "Voce esta com black skull. Nao pode abrir loja."
+        return false, "You have a black skull. Can't open a shop."
     end
     -- (getTradeState() not available in this TFS build; trade lock skipped)
     return true
@@ -106,7 +106,7 @@ end
 -- ---------------------------------------------------------------------------
 function PlayerShop_Open(player, payload)
     if PlayerShop_IsSelling(player:getId()) then
-        PlayerShop_Reject(player, "Voce ja tem uma loja aberta.")
+        PlayerShop_Reject(player, "You already have a shop open.")
         return false
     end
     local ok, why = canOpenShop(player)
@@ -124,17 +124,17 @@ function PlayerShop_Open(player, payload)
         local itemId = tonumber(entry.itemId) or 0
         local itemUid = tonumber(entry.itemUid) or 0
         if price < PlayerShopConfig.minItemPrice or price > PlayerShopConfig.maxItemPrice then
-            PlayerShop_Reject(player, ("Preco invalido no slot %d."):format(slot))
+            PlayerShop_Reject(player, ("Invalid price on slot %d."):format(slot))
             return false
         end
         if count <= 0 then
-            PlayerShop_Reject(player, ("Quantidade invalida no slot %d."):format(slot))
+            PlayerShop_Reject(player, ("Invalid quantity on slot %d."):format(slot))
             return false
         end
         local realItem = findItemInDepot(player, itemUid, itemId)
         if not realItem then
             PlayerShop_Reject(player,
-                ("Voce nao possui o item do slot %d no depot."):format(slot))
+                ("You don't have the item from slot %d in your depot."):format(slot))
             return false
         end
         local realCount = realItem:getCount()
@@ -152,7 +152,7 @@ function PlayerShop_Open(player, payload)
     end
 
     if #items == 0 then
-        PlayerShop_Reject(player, "Loja vazia. Adicione pelo menos um item.")
+        PlayerShop_Reject(player, "Empty shop. Add at least one item.")
         return false
     end
 
@@ -184,14 +184,14 @@ function PlayerShop_Open(player, payload)
         if totalNeeded > have then
             local nm = ItemType(itemId):getName() or ('id ' .. itemId)
             PlayerShop_Reject(player,
-                ("Voce nao tem %d %s no depot (so tem %d)."):format(totalNeeded, nm, have))
+                ("You don't have %d %s in your depot (only have %d)."):format(totalNeeded, nm, have))
             return false
         end
     end
 
     local cleanText = sanitizeText(payload.text)
     if cleanText:gsub("%s+", "") == "" then
-        PlayerShop_Reject(player, "Voce precisa colocar um titulo na loja.")
+        PlayerShop_Reject(player, "You need to set a title for the shop.")
         return false
     end
 
@@ -267,7 +267,7 @@ function PlayerShop_Open(player, payload)
         sellerName = player:getName(),
     }
     player:setStorageValue(PlayerShopConfig.storageKey, 1)
-    player:sendTextMessage(MESSAGE_INFO_DESCR, "Loja aberta. Voce nao pode se mover ate fechar.")
+    player:sendTextMessage(MESSAGE_STATUS_DEFAULT, "Shop open. You can't move until you close it.")
 
     -- Force imediato: o servidor C++ chama getSkullClient(player) e envia
     -- o novo skull (SHOP_ICON=7) pra todos os specs via packet nativo.
@@ -374,7 +374,7 @@ function PlayerShop_Close(playerId, reason, sellerOverride, viaInventory)
         -- (PK ou nenhum), e o servidor envia o update nativo pra todos
         -- os specs. Resultado: o icone some na hora pra todo mundo.
         if Game.updateCreatureSkull then Game.updateCreatureSkull(seller) end
-        seller:sendTextMessage(MESSAGE_INFO_DESCR, reason or "Loja fechada.")
+        seller:sendTextMessage(MESSAGE_STATUS_DEFAULT, reason or "Shop closed.")
         PlayerShop_BroadcastState(seller, false)
         PlayerShop_NotifyVipWatchers(seller, false)
     end
@@ -384,7 +384,7 @@ function PlayerShop_Close(playerId, reason, sellerOverride, viaInventory)
         if sellerId == playerId then
             local buyer = Player(buyerId)
             if buyer then
-                buyer:sendTextMessage(MESSAGE_STATUS_WARNING, "Esta loja nao esta mais disponivel.")
+                buyer:sendTextMessage(MESSAGE_STATUS_DEFAULT, "This shop is no longer available.")
                 PlayerShop_SendOpcode(buyer, PlayerShopOpcode.STATE_BROADCAST,
                     PlayerShop_PackU32(playerId) .. PlayerShop_PackU8(0))
             end
@@ -432,18 +432,18 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
     -- Buyer normal precisa estar em PZ pra abrir a janela. O dono nao precisa
     -- (ele consulta o estado da propria loja em qualquer canto da PZ).
     if not isOwner and not PlayerShop_TileIsPZ(buyer:getPosition()) then
-        PlayerShop_Reject(buyer, "Voce precisa estar em zona protegida para ver lojas.")
+        PlayerShop_Reject(buyer, "You must be in a protection zone to view shops.")
         return false
     end
     local shop = ActiveShops[sellerId]
     if not shop then
-        PlayerShop_Reject(buyer, "Esta loja nao esta mais ativa.")
+        PlayerShop_Reject(buyer, "This shop is no longer active.")
         return false
     end
     local seller = Player(sellerId)
     if not seller then
         PlayerShop_Close(sellerId, "Seller offline.")
-        PlayerShop_Reject(buyer, "Vendedor offline.")
+        PlayerShop_Reject(buyer, "Seller offline.")
         return false
     end
 
@@ -518,32 +518,32 @@ end
 function PlayerShop_Buy(buyer, sellerId, slot, qty)
     local shop = ActiveShops[sellerId]
     if not shop then
-        PlayerShop_Reject(buyer, "Loja nao esta mais ativa.")
+        PlayerShop_Reject(buyer, "Shop is no longer active.")
         return false
     end
     if not PlayerShop_TileIsPZ(buyer:getPosition()) then
-        PlayerShop_Reject(buyer, "Voce precisa estar em zona protegida pra comprar.")
+        PlayerShop_Reject(buyer, "You must be in a protection zone to buy.")
         return false
     end
     if buyer:getCondition(CONDITION_INFIGHT) then
-        PlayerShop_Reject(buyer, "Voce esta em battle.")
+        PlayerShop_Reject(buyer, "You are in battle.")
         return false
     end
     local entry = shop.items[slot]
     if not entry then
-        PlayerShop_Reject(buyer, "Item ja foi vendido ou slot invalido.")
+        PlayerShop_Reject(buyer, "Item already sold or invalid slot.")
         return false
     end
     qty = tonumber(qty) or 0
     if qty <= 0 or qty > entry.count then
-        PlayerShop_Reject(buyer, "Quantidade invalida.")
+        PlayerShop_Reject(buyer, "Invalid quantity.")
         return false
     end
 
     local seller = Player(sellerId)
     if not seller then
         PlayerShop_Close(sellerId, "Seller offline.")
-        PlayerShop_Reject(buyer, "Vendedor offline.")
+        PlayerShop_Reject(buyer, "Seller offline.")
         return false
     end
 
@@ -603,7 +603,7 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
         buyer:addMoney(fromBp)
         buyer:setBankBalance((buyer:getBankBalance() or 0) + fromBank)
         PlayerShop_Reject(buyer,
-            "Voce nao tem espaco/cap pra esse item. Compra cancelada.")
+            "You don't have room/capacity for this item. Purchase cancelled.")
         return false
     end
 
@@ -618,19 +618,17 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
 
     -- Notifications
     local itemName = itType:getName() or "item"
-    buyer:sendTextMessage(MESSAGE_INFO_DESCR,
-        ("Comprou %dx %s por %d gold (bp: %d, banco: %d)."):format(qty, itemName, total, fromBp, fromBank))
-    -- Mensagem verde flutuante (centerGreen via MESSAGE_INFO_DESCR=22) pro
-    -- vendedor saber em tempo real quem comprou o que.
-    seller:sendTextMessage(MESSAGE_INFO_DESCR,
-        ("VENDA! %s comprou %dx %s por %d gold (no banco)."):format(
+    buyer:sendTextMessage(MESSAGE_STATUS_DEFAULT,
+        ("Bought %dx %s for %d gold (bp: %d, bank: %d)."):format(qty, itemName, total, fromBp, fromBank))
+    seller:sendTextMessage(MESSAGE_STATUS_DEFAULT,
+        ("SALE! %s bought %dx %s for %d gold (deposited to bank)."):format(
             buyer:getName(), qty, itemName, total))
 
     -- If shop now empty, auto-close.
     local remaining = 0
     for _ in pairs(shop.items) do remaining = remaining + 1 end
     if remaining == 0 then
-        PlayerShop_Close(sellerId, "Todos os itens foram vendidos! Loja fechada.")
+        PlayerShop_Close(sellerId, "All items sold out! Shop closed.")
     else
         -- Refresh buyer's window.
         PlayerShop_SendShopDataTo(buyer, sellerId)

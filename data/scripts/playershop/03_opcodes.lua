@@ -55,7 +55,7 @@ function PlayerShop_DispatchOpcode(player, opcode, buffer)
         PlayerShop_Open(player, payload)
 
     elseif opcode == PlayerShopOpcode.CLOSE then
-        PlayerShop_Close(player:getId(), "Loja fechada.")
+        PlayerShop_Close(player:getId(), "Shop closed.")
 
     elseif opcode == PlayerShopOpcode.REQUEST then
         local now = os.mtime and os.mtime() or (os.time() * 1000)

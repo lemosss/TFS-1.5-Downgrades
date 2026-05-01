@@ -4,14 +4,14 @@
 
 local function closeAllShops(reason)
     for sellerId, _ in pairs(ActiveShops) do
-        PlayerShop_Close(sellerId, reason or "Server save em andamento. Sua loja foi fechada.")
+        PlayerShop_Close(sellerId, reason or "Server save em andamento. Sua loja foi closed.")
     end
 end
 
 local shutdown = GlobalEvent("PlayerShopShutdown")
 shutdown:type("shutdown")
 shutdown:onShutdown(function()
-    closeAllShops("Server desligando. Loja fechada.")
+    closeAllShops("Server shutting down. Shop closed.")
     return true
 end)
 shutdown:register()

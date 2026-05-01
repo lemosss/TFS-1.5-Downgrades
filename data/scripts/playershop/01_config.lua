@@ -66,7 +66,7 @@ end
 
 function PlayerShop_Reject(player, reason)
     if not player then return end
-    PlayerShop_SendOpcode(player, PlayerShopOpcode.REJECT, reason or "Operacao invalida.")
+    PlayerShop_SendOpcode(player, PlayerShopOpcode.REJECT, reason or "Invalid operation.")
     -- After every reject, resync the player's true selling state so the client's
     -- iAmSelling flag matches reality. (Without this, the client's optimistic
     -- iAmSelling=true that was set on commitCreateShop gets RESET to false by

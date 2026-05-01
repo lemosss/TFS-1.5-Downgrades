@@ -1720,7 +1720,59 @@ Numeric arithmetic (`if count[cid] < 1`, `player:depositMoney(count[cid])`, `rem
 
 **Lesson** (already known from earlier sessions but worth restating): town bankers in this datapack never delegate to `bank.lua`; each NPC has its own copy of the dialog. Any future bank-side change has to be applied across the 24-file group via bulk script. Same trap as the `Xodet.lua` orphan-script note from Day-8.
 
+### Day-9 simplification — drop client-side seller restrictions, keep only the server anchor
+
+User decision: stop client-side babysitting of the seller. The character is allowed to TRY to walk / turn / click / chat normally; the only enforcement is the server warping them back to the anchor tile if they actually moved. Cleaner UX, less code.
+
+**Removed (`otcv8-dev`):**
+
+1. `modules/game_walking/walking.lua` `walk(dir, ticks)` — was early-returning when `modules.game_playershop.iAmSelling` (~line 274). Removed.
+2. `modules/game_walking/walking.lua` `turn(dir, repeated)` — same iAmSelling early-return (~line 414). Removed.
+3. `modules/game_interface/gameinterface.lua` left-click autowalk — `if iAmSelling then return false end` inside the autoWalkPos branch (~line 779). Removed.
+4. `modules/game_interface/gameinterface.lua` right-click swallow — early-return at top of `processMouseAction` that swallowed right-click on other creatures during shop. Removed entirely.
+5. `modules/game_console/console.lua` chat block — `sendCurrentMessage` had a whitelist that only allowed `/shop`/`!fecharloja` while iAmSelling. Removed.
+
+**Kept (server-side, in `data/scripts/playershop/04_events.lua`):**
+
+```lua
+local tick = GlobalEvent("PlayerShopTick")
+tick:interval(500)
+tick:onThink(function()
+    for sellerId, shop in pairs(ActiveShops) do
+        local seller = Player(sellerId)
+        if seller then
+            local cur = seller:getPosition()
+            if not shop.anchorPos then
+                shop.anchorPos = cur
+            elseif cur.x ~= shop.anchorPos.x or cur.y ~= shop.anchorPos.y or cur.z ~= shop.anchorPos.z then
+                if PlayerShop_TileIsPZ(shop.anchorPos) then
+                    seller:teleportTo(shop.anchorPos, false)
+                else
+                    PlayerShop_Close(sellerId, "Shop closed (left protection zone).")
+                end
+            end
+            ...
+        end
+    end
+end)
+```
+
+So the seller may type / click / right-click / attack / turn / etc. all they want — every 500ms the tick checks if their tile changed and slams them back. Still tight enough that nobody can actually leave. Final follow-up: user kept WASD / arrow-key movement blocked client-side (subjective UX choice — they don't want the visual "step + warp" twitch from keyboard mashing), so `walk()` got its iAmSelling early-return PUT BACK while `turn()` stayed open. The `Player:onTurn` event in `data/events/scripts/player.lua` ALSO had a `sendCancelMessage("Voce nao pode virar com a loja aberta.")` block that had to be removed for turning to actually go through.
+
+**To revert and re-enable client + server locks** (in case Idle Shop / similar later needs the seller frozen):
+
+| File | What to put back |
+|---|---|
+| `otcv8-dev/modules/game_walking/walking.lua` `walk()` (after `if not player or g_game.isDead()...`) | `if modules.game_playershop and modules.game_playershop.iAmSelling then return end` (currently in place — keyboard movement still blocked) |
+| `otcv8-dev/modules/game_walking/walking.lua` `turn()` (right after the local player) | same `iAmSelling` early-return (currently REMOVED — turning allowed) |
+| `otcv8-dev/modules/game_interface/gameinterface.lua` `processMouseAction()` autowalk branch | `if modules.game_playershop and modules.game_playershop.iAmSelling then return false end` before `player:autoWalk(autoWalkPos)` |
+| `otcv8-dev/modules/game_interface/gameinterface.lua` `processMouseAction()` top | early `if mouseButton == MouseRightButton and iAmSelling then return true end` swallow |
+| `otcv8-dev/modules/game_console/console.lua` `sendCurrentMessage()` (before the chat-disable check) | the iAmSelling whitelist block — only allow `/shop ...` to pass through |
+| `Realera TFS 1.5/data/events/scripts/player.lua` `Player:onTurn` (top of function, before the access check) | `if ActiveShops and ActiveShops[self:getId()] then self:sendCancelMessage("...") return false end` to stop the server's onTurn dispatch |
+
 ### Open thread
 
-- **Seller view (`CreateShopWindow`) redesign** — the second screenshot the user shared shows a different layout (description-focused, with Idle Shop / Edit Description / History buttons, slider-based price entry). Currently the seller view still uses the old slot-list layout. Picking it up next session.
-- **Idle Shop / History** — both are net-new features. Idle pauses the shop without closing; History is a per-shop sales log. Both will need server-side state changes.
+- **Shop Pass (48h consumable)** — pending: a Lua-action item that, when used, sets storage `STORAGE_SHOP_PASS_EXPIRES = 88811 = os.time() + 48*3600`, stacking. `canOpenShop()` rejects with "You need a Shop Pass to open a shop." if the storage is `<= os.time()`. Item id TBD.
+- **Shop Idle** — bigger feature. Three architectures discussed (NPC ghost / player offline-active / persistence-only). User to pick before implementation.
+- **Seller view (`CreateShopWindow`) redesign** — second screenshot reference. Description-focused with Idle Shop / Edit Description / History buttons, slider-based price entry. Old slot-list still in place.
+- **History** — per-shop sales log; needs new persistence (storage table or new SQL table).

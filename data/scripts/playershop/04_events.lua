@@ -21,7 +21,7 @@ local logout = CreatureEvent("PlayerShopLogout")
 logout:type("logout")
 logout:onLogout(function(player)
     if PlayerShop_IsSelling(player:getId()) then
-        PlayerShop_Close(player:getId(), "Loja fechada (logout).", player)
+        PlayerShop_Close(player:getId(), "Shop closed (logout).", player)
     end
     return true
 end)
@@ -48,19 +48,19 @@ tick:onThink(function()
                 if PlayerShop_TileIsPZ(shop.anchorPos) then
                     seller:teleportTo(shop.anchorPos, false)
                 else
-                    PlayerShop_Close(sellerId, "Loja fechada (saiu da zona protegida).")
+                    PlayerShop_Close(sellerId, "Shop closed (left protection zone).")
                 end
             end
             if seller.resetIdleTime then seller:resetIdleTime() end
         else
-            PlayerShop_Close(sellerId, "Vendedor offline.")
+            PlayerShop_Close(sellerId, "Seller offline.")
         end
     end
     -- expiration
     local now = os.time()
     for sellerId, shop in pairs(ActiveShops) do
         if now - shop.startTime >= PlayerShopConfig.maxShopDuration then
-            PlayerShop_Close(sellerId, "Tempo limite da loja atingido (8h).")
+            PlayerShop_Close(sellerId, "Shop time limit reached (8h).")
         end
     end
     -- Buyer left PZ -> force-close their shop view.
@@ -72,7 +72,7 @@ tick:onThink(function()
         if not buyer then
             OpenShopWindows[buyerId] = nil
         elseif not PlayerShop_TileIsPZ(buyer:getPosition()) then
-            PlayerShop_Reject(buyer, "Voce saiu da zona protegida. Loja fechada.")
+            PlayerShop_Reject(buyer, "You left the protection zone. Shop closed.")
             OpenShopWindows[buyerId] = nil
         else
             local seller = Player(sellerId)
@@ -83,7 +83,7 @@ tick:onThink(function()
                 local dist = (bp.z ~= sp.z) and 99
                     or math.max(math.abs(bp.x - sp.x), math.abs(bp.y - sp.y))
                 if dist > 1 then
-                    PlayerShop_Reject(buyer, "Voce se afastou do vendedor. Loja fechada.")
+                    PlayerShop_Reject(buyer, "You moved too far from the seller. Shop closed.")
                     OpenShopWindows[buyerId] = nil
                 end
             end
