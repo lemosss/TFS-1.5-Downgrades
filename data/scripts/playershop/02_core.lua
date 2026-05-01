@@ -702,11 +702,13 @@ function PlayerShop_SendInventoryList(player)
 
     local payload = PlayerShop_PackU16(#items)
     for idx, e in ipairs(items) do
-        -- Send clientId for rendering. Server keeps the server-id mapping
-        -- via the entry index (idx), so the picker's "select" callback can
-        -- still resolve the right depot item.
+        -- Send BOTH ids: serverId is what the depot lookup uses on OPEN, and
+        -- clientId is what the OTC widget needs to render the sprite. The
+        -- old format only sent clientId, which made findItemInDepot fail for
+        -- runes (server 2304 vs client.dat 3191 etc) and rejected the open.
         payload = payload
                .. PlayerShop_PackU32(idx)               -- entry index (virtual uid)
+               .. PlayerShop_PackU16(e.id)              -- serverId (used for depot lookup)
                .. PlayerShop_PackU16(ItemType(e.id):getClientId())
                .. PlayerShop_PackU16(math.min(e.count, 0xFFFF))
                .. PlayerShop_PackU16(e.charges)
