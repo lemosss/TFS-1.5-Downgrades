@@ -4,7 +4,7 @@ import struct
 import sys
 from pathlib import Path
 
-OTB = Path(r"C:\Users\Lemos\Desktop\Realera TFS 1.5\data\items\items.otb")
+OTB = Path(r"C:\Users\Lemos\Desktop\Realera OT\Realera TFS 1.5\data\items\items.otb")
 
 ESC = 0xFD
 NODE_START = 0xFE

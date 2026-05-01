@@ -804,6 +804,22 @@ bool IOLoginData::savePlayer(Player* player)
 		}
 	}
 
+	// DepotChest::postAddNotification only flips its OWN `save` flag (its
+	// getParent() skips the locker and goes straight to the tile, so the
+	// locker's notification never fires). Without this loop, dropping items
+	// directly into the depot chest -- which is where the player actually
+	// stores stuff -- never sets needsSave on the locker, the whole save
+	// block is skipped, and the DB keeps the previous depot state. Result:
+	// items the player took out reappear on next login (cloned).
+	if (!needsSave) {
+		for (const auto& it : player->depotChests) {
+			if (it.second->needsSave()) {
+				needsSave = true;
+				break;
+			}
+		}
+	}
+
 	if (needsSave) {
 		if (!db.executeQuery(fmt::format("DELETE FROM `player_depotlockeritems` WHERE `player_id` = {:d}", player->getGUID()))) {
 			return false;
