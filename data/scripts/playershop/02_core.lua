@@ -453,10 +453,43 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
         OpenShopWindows[buyer:getId()] = sellerId
     end
 
+    -- Compute the buyer's spendable balance: bank + cash (gold + plat*100
+    -- + crystal*10000). The 7.72 protocol doesn't push wallet info to the
+    -- client natively, so the shop UI piggybacks on SHOP_DATA.
+    local function countItemInBP(player, itemId)
+        local total = 0
+        local bp = player:getSlotItem(CONST_SLOT_BACKPACK)
+        if not bp then return 0 end
+        local stack = { bp }
+        while #stack > 0 do
+            local cur = stack[#stack]; stack[#stack] = nil
+            local size = cur:getSize() or 0
+            for i = 0, size - 1 do
+                local it = cur:getItem(i)
+                if it then
+                    if it:getId() == itemId then
+                        total = total + (it:getCount() or 1)
+                    end
+                    if ItemType(it:getId()):isContainer() then
+                        stack[#stack + 1] = it
+                    end
+                end
+            end
+        end
+        return total
+    end
+    local cash = countItemInBP(buyer, 2148)
+              + countItemInBP(buyer, 2152) * 100
+              + countItemInBP(buyer, 2160) * 10000
+    local bank = (buyer.getBankBalance and buyer:getBankBalance()) or 0
+    local total = cash + bank
+    if total > 0xFFFFFFFF then total = 0xFFFFFFFF end
+
     local payload = PlayerShop_PackU32(sellerId)
                  .. PlayerShop_PackStr(seller:getName())
                  .. PlayerShop_PackStr(shop.text or "")
                  .. PlayerShop_PackU8(isOwner and 1 or 0)  -- flag owner-mode
+                 .. PlayerShop_PackU32(total)              -- buyer balance (bank + cash)
     local n = 0
     for _ in pairs(shop.items) do n = n + 1 end
     payload = payload .. PlayerShop_PackU8(n)
@@ -465,12 +498,14 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
         -- Send clientId so the OTC widget's setItemId renders the correct
         -- sprite from Tibia.dat. Server-side we keep tracking entry.itemId
         -- (server id) by slot, the buyer only echoes the slot back to buy.
+        local weightPer = (it.getWeight and it:getWeight()) or 0  -- in 0.01 oz units (g*100)
         payload = payload
                .. PlayerShop_PackU8(slot)
                .. PlayerShop_PackU16(it:getClientId())
                .. PlayerShop_PackU16(entry.count)
                .. PlayerShop_PackU32(entry.price)
                .. PlayerShop_PackU16(entry.charges or 0)
+               .. PlayerShop_PackU32(weightPer)
                .. PlayerShop_PackStr(it:getName() or "item")
     end
     PlayerShop_SendOpcode(buyer, PlayerShopOpcode.DATA, payload)

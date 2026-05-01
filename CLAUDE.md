@@ -1554,3 +1554,125 @@ Realera TFS 1.5 (this repo):
   Tibia.dat clientId desync for backpack items, OR the player shop UI
   passes the wrong id (server vs client) to a sprite render call. Not
   investigated yet; pending a concrete repro item id.
+
+## 16. Day-9 — Depot save trigger fix + PlayerShop server↔client id mismatch + buyer-view UX overhaul
+
+Three independent shop bugs surfaced when the user actually tried to sell items, plus the buyer-view UI got a real layout pass. Each fix is small but the root causes are subtle, so they're documented in detail below.
+
+### Problem 1 — Items put into the depot disappeared on logout
+
+Repro: drop a stack of dice + a backpack into the depot, log out, log back in. Both old depot contents AND the items just placed reappeared in the depot — i.e. the depot was effectively in a "frozen" state and never re-saved.
+
+Root cause: `IOLoginData::savePlayer` only runs the depot DELETE+INSERT block when at least one DepotLocker reports `needsSave()=true` (`src/iologindata.cpp` ~line 800). The locker's `save` flag flips inside `DepotLocker::postAddNotification` / `postRemoveNotification`. But the player puts items in the **DepotChest** (the chest INSIDE the locker), and `DepotChest::postAddNotification` walks the parent chain via `getParent()` — which intentionally jumps TWO levels up (parent.parent → tile), skipping the locker. So the locker's `save` flag never flipped, the whole depot save block was skipped on logout, and the DB held whatever state was there before the session.
+
+Fix (`src/iologindata.cpp` after the existing `for (... player->depotLockerMap)` loop): also check `player->depotChests` for `needsSave()`. Pushed as `56e92cee` on branch `8.0`. After rebuild, depot persists exactly the in-memory state on logout.
+
+### Problem 2 — "Voce nao possui o item do slot 1 no depot" when starting a shop
+
+Repro: open Create Shop, add a Fireball Rune (or any item — also reproduced with backpack and dice), set price, click Iniciar Venda → server rejects with `Voce nao possui o item do slot N no depot.`
+
+Cause: the inventory list packet was packing the item's **clientId** (Cipsoft `Tibia.dat` id) but `findItemInDepot` searches with `it:getId() == itemId` where `Item:getId()` returns the OTB **serverId**. For a Fireball Rune that's serverId 2302 vs clientId 3189 — never equal, always rejected. Worked for items where serverId == clientId by coincidence (e.g. dice 5792).
+
+Fix (two-sided):
+
+**Server** — `data/scripts/playershop/02_core.lua`, `PlayerShop_SendInventoryList`: send BOTH ids in each entry (serverId u16 BEFORE the existing clientId u16). Wire format change is +2 bytes per entry.
+
+**Client** (otcv8-dev `modules/game_playershop/create_shop.lua`):
+- `create_shop_inventory` parses both ids; stores `entry.id = clientId` (for `widget:setItemId()` rendering) AND `entry.serverId = serverId` (echoed back on OPEN).
+- `assignItemDirect` / `assignItemToSlot` copy `s.serverId = entry.serverId or 0`.
+- `populatePickerList`'s `matches` table builder ALSO needs to copy `serverId` — without this, the picker filter loop strips it on the way to the slot. Real bug was here; without it `entry.serverId` arrived `nil` at `assignItemDirect`, the slot stored `0`, and the OPEN packet still sent `itemId=0`. Caught via debug `print` at the OPEN-payload pack site after staring at the trace for 20 minutes.
+- `sendShopOpen` packs `s.serverId or 0` instead of `s.entryId`.
+
+Pushed as `1d9be52d` (server) and `4e4d987` + `aa6df29` (client).
+
+**General lesson** for the playershop wire protocol: the server's lookup APIs (`findItemInDepot`, `Player:findItem`, all the depot/inventory walks via `Item:getId()`) want the **server OTB id**. The client renders sprites via `widget:setItemId(clientId)` (Tibia.dat id). Always send both ids and use the right one in each direction. Naming the field `entryId` blurs the distinction — `entry.serverId` / `entry.clientId` would have prevented this whole detour.
+
+### Problem 3 — Drag-drop UI bugs in Create Shop (qty prompt opens twice)
+
+Repro: open the picker, pick a stackable item, the quantity prompt pops up, type 5, click OK → list closes BUT the quantity prompt is still there waiting for another OK.
+
+Cause: OTC dispatched both `cell.onDoubleClick` AND `pickerWindow.okBtn.onClick` for the same gesture (double-click on cell), so `promptCountAndAssign` ran twice, creating two stacked qty windows.
+
+Fix — `promptCountAndAssign` calls `destroyPickerWindow()` BEFORE creating the qty widget. `destroyPickerWindow` sets `pickerSelected = nil`, so the okBtn closure's `if pickerSelected and pickerSelected.entry then` check short-circuits on the second invocation. Pushed as `f54b8a2`.
+
+### Problem 4 — `verdana-11px` font typo + OTUI parse cascade
+
+The seller-bubble font in `playershop.lua` was set to `'verdana-11px'` (no suffix). That .otfont doesn't exist; only `verdana-11px-antialised` / `-monochrome` / `-rounded`. Result: every state-broadcast tick (every 250ms) emitted `ERROR: font 'verdana-11px' not found`. Also: `text: -- g` placeholder in the gold-counter widget was treated as a Lua-style comment by the OTUI parser, breaking the entire ShopViewWindow style declaration with cascading errors. Two unrelated typos that compounded into "buyer view doesn't open at all".
+
+Fix:
+- `playershop.lua` — `'verdana-11px'` → `'verdana-11px-antialised'`.
+- `playershop.otui` — strip ALL `--` style comment lines (OTUI doesn't accept Lua-style comments at the top level), and `text: -- g` → `text: 0 g`.
+
+Lesson: when the user reports "this whole thing doesn't open", check for OTUI parse errors before assuming a Lua bug. The terminal's `failed to load UI from 'playershop.otui': '' is not a defined style` is the smoking gun for a comment-line / property-name typo killing the parse.
+
+### Buyer view (`ShopViewWindow`) — full layout redesign
+
+Before this session the buyer view was a vertical stack of `ShopBuyRow` widgets (item slot + name + price + qty input + per-row Buy button). User asked for the Onigashima/Priston-Tale style: search bar at the top, sprite grid in the middle, single info panel at the bottom with the selected item's details + a single Buy button + a description box.
+
+New OTUI structure (`modules/game_playershop/playershop.otui`, `ShopViewWindow`):
+
+```
+ShopViewWindow (460x470)
+├── (sellerLine: visible:false, height:0 — shop blurb shown only via the
+│    seller's overhead bubble, not duplicated in the window)
+├── searchLbl + searchEdit + searchClearBtn
+│    (search row anchored ONLY to the right half of the window per user
+│    request: searchEdit.left = parent.horizontalCenter)
+├── viewItems (ScrollablePanel, layout:grid, cell-size 38x38, panel_flat
+│    texture)
+│    └── 1..N ShopBuyCell widgets (one per shop item)
+├── infoPanel (UIWidget, 110px tall)
+│    ├── selName, priceLbl, amountScroll (HorizontalScrollBar),
+│    │   amountLbl, weightLbl  (LEFT column)
+│    ├── previewSlot (UIWidget wrapper) > previewItem (Item, default
+│    │   /images/ui/item slot bg)
+│    │   buyBtn underneath  (MIDDLE column)
+│    └── descPanel (panel_flat) > descText  (RIGHT column)
+├── footerSep (HorizontalSeparator above closeBtn)
+├── goldBox (panel_flat texture, 150x20) — contains goldIcon (UIItem,
+│    no slot bg, item-id 3031 = client.dat gold coin) + goldLbl
+│    (right-aligned)
+└── closeBtn (anchored bottom-right)
+```
+
+`shop_view.lua` rewritten to:
+- Build cells in a grid via `ShopBuyCell` (replacing `buildItemRow`).
+- Track `selectedCell` + `selectedEntry`. `selectCell()` toggles `:setOn` on the focused cell (gold border via `$on` style state).
+- Search bar `onTextChange` runs `applySearchFilter()` which `setVisible(false)` on cells whose name doesn't contain the needle. Pure client-side filter.
+- `amountScroll` (HorizontalScrollBar) min=1, max=stack count. `onValueChange` updates `amountLbl` AND `previewItem:setItemCount(value)` so the preview sprite badge tracks the chosen amount.
+- Single Buy button (`buyBtn`) sends `OPCODE_SHOP_BUY` with `(sellerId, slot, amount)` based on selectedEntry + amountScroll value.
+- Double-click on a cell shortcuts to "buy at current amount".
+
+Subtle UI gotchas worth remembering:
+
+- **`Item < UIItem`** (`data/styles/10-items.otui`) bakes `image-source: /images/ui/item` into every `Item` widget. To get a sprite WITHOUT the inset slot frame around it, use `UIItem` directly (skip the style). Used for `goldIcon`. For `cellItem` / `previewItem` we ended up using `Item` so the slot bg matches BP rendering.
+- **`/images/ui/panel_bottom`** is 165x160 with a strong inset frame baked in; `image-border: 7` on a small panel gives a clean 9-slice frame, but on tall scrollable panels (the items grid) the middle stretch produces visible horizontal bands. Use `/images/ui/panel_flat` (32x32 plain stone) for the grid + bottom-info panels, keep `panel_bottom` for the chat-style framed boxes only.
+- **Forward-anchor refs in OTUI** work for parent-relative anchors but FAIL on cross-anchored pairs like "A.bottom = B.top" + "B.top = A.bottom". Hit this when chaining `searchClearBtn` → `searchEdit` → `searchClearBtn`. Solution: anchor the clear button to a stable reference (`parent.right` + fixed size + `margin-top`) instead of stretching it to match `searchEdit.top/bottom`.
+- **OTUI `text:` value parsing** treats `--` as a Lua-ish comment marker only at line start; inside a value it's literal. But `text: -- g` confused the parser regardless and broke the whole style. Avoid `--` in OTUI value strings entirely.
+
+### Gold counter — bank + cash piggyback on SHOP_DATA
+
+Tibia 7.72 doesn't expose the player's wallet to the client (no AmountUpdate packet, no balance query). To show the buyer how much they can spend without a separate roundtrip:
+
+`PlayerShop_SendShopDataTo` walks the buyer's open backpack hierarchy via `Container:getItem()` recursion, summing item counts of gold coin (2148) + plat (2152) ×100 + crystal (2160) ×10000. Combined with `Player:getBankBalance()` for the bank portion. The total (capped at uint32_t max) is appended to the SHOP_DATA payload right after the `isOwner` flag, BEFORE the item count `n`. Client parses it into module-scope `viewBalance` and `goldLbl:setText(tostring(viewBalance))`.
+
+Per-item weight (in 1/100 oz units, the `it.weight` value from items.xml × 100) is also appended to each item entry, between `charges` and `name`. Client formats `e.weight / 100` with two decimals for the Weight: label and the descPanel tooltip.
+
+### Files touched
+
+Realera TFS 1.5 (this repo, branch `8.0`):
+- `src/iologindata.cpp` — depot save trigger via depotChests fallback
+- `data/scripts/playershop/02_core.lua` — INVENTORY_LIST adds serverId; SHOP_DATA adds buyer balance + per-item weight
+
+otcv8-dev (`lemosss/otcv8-dev`, branch `master`):
+- `modules/game_playershop/playershop.otui` — full ShopViewWindow rewrite + ShopBuyCell style + goldBox + searchBar
+- `modules/game_playershop/shop_view.lua` — grid build, selection, search filter, balance/weight rendering
+- `modules/game_playershop/create_shop.lua` — serverId in match copy + qty prompt double-fire fix
+- `modules/game_playershop/playershop.lua` — onGameEnd tears down all shop windows, font fix, dev print cleanup
+- `modules/client/client.otmod` — drop dangling `client_mobile` dependency from earlier cleanup commits
+- `modules/gamelib/ui/uiitem.lua` + `modules/game_interface/widgets/uigamemap.lua` + `modules/game_interface/gameinterface.lua` — `getEffectiveCount(item)` helper for rune drag (3147-3203 client.dat range = server 2260-2316), routes runes through `moveStackableItem` so the count window respects the visible stack instead of `getCount()=1`. Plus `moveStackableItem.commit()` reads `getItemCountOrSubType()` (raw byte) instead of `getItemCount()` (which returns 1 for charge-flagged dat items even after `setItemCount(N)` populates the visual).
+
+### Open thread
+
+- **Seller view (`CreateShopWindow`) redesign** — the second screenshot the user shared shows a different layout (description-focused, with Idle Shop / Edit Description / History buttons, slider-based price entry). Currently the seller view still uses the old slot-list layout. Picking it up next session.
+- **Idle Shop / History** — both are net-new features. Idle pauses the shop without closing; History is a per-shop sales log. Both will need server-side state changes.
