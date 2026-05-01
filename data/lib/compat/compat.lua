@@ -140,6 +140,36 @@ addOutfitCondition = Condition.setOutfit
 
 function doCombat(cid, combat, var) return combat:execute(cid, var) end
 
+-- isNumeric / isNumber: 101-compat.lua aliases isNumber = isNumeric, but
+-- isNumeric itself was never defined anywhere in this fork. NPC scripts
+-- (Suzy.lua, etc.) call isValidMoney() which calls isNumber() at runtime
+-- and crash with 'attempt to call a nil value (global isNumber)'.
+function isNumeric(n) return type(n) == 'number' end
+isNumber = isNumeric
+
+-- formatGold(n): strips Lua's float-trailing ".0" and inserts thousand
+-- separators ("." every 3 digits). Used by bank NPCs so balances render
+-- as "2.009.988" instead of "2009988.0 gold".
+function formatGold(n)
+	local s = tostring(math.floor(tonumber(n) or 0))
+	local out = s:reverse():gsub('(%d%d%d)', '%1.'):reverse()
+	if out:sub(1, 1) == '.' then out = out:sub(2) end
+	return out
+end
+
+-- Player.getPremiumDays: this TFS exposes only premiumEndsAt (unix
+-- timestamp at which premium expires; 0 = never had premium). The core/
+-- player.lua isPremium() helper calls getPremiumDays() and crashes.
+-- Compute days remaining from the timestamp and define both the global
+-- and the Player metatable method that callers use.
+function Player.getPremiumDays(self)
+	local endsAt = self.getPremiumEndsAt and self:getPremiumEndsAt() or 0
+	if endsAt == 0 then return 0 end
+	local left = endsAt - os.time()
+	if left <= 0 then return 0 end
+	return math.floor(left / 86400)
+end
+
 function isCreature(cid) return Creature(cid) ~= nil end
 function isPlayer(cid) return Player(cid) ~= nil end
 function isMonster(cid) return Monster(cid) ~= nil end

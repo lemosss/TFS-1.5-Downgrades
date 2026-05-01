@@ -1672,6 +1672,54 @@ otcv8-dev (`lemosss/otcv8-dev`, branch `master`):
 - `modules/client/client.otmod` — drop dangling `client_mobile` dependency from earlier cleanup commits
 - `modules/gamelib/ui/uiitem.lua` + `modules/game_interface/widgets/uigamemap.lua` + `modules/game_interface/gameinterface.lua` — `getEffectiveCount(item)` helper for rune drag (3147-3203 client.dat range = server 2260-2316), routes runes through `moveStackableItem` so the count window respects the visible stack instead of `getCount()=1`. Plus `moveStackableItem.commit()` reads `getItemCountOrSubType()` (raw byte) instead of `getItemCount()` (which returns 1 for charge-flagged dat items even after `setItemCount(N)` populates the visual).
 
+### Day-9 follow-up — Lua compat shims + bank NPCs number formatting
+
+Two NPC-side errors surfaced after the Day-9 push:
+
+1. `data/lib/miscellaneous/050-functions.lua:127: attempt to call a nil value (global 'isNumber')` — fired from Suzy.lua and any NPC that uses `isValidMoney()` from the deposit/transfer flow. Root cause: `data/lib/101-compat.lua` aliases `isNumber = isNumeric` but `isNumeric` itself was never defined anywhere in this fork. Both globals end up nil; `isValidMoney(money)` then crashes.
+
+2. `data/lib/core/player.lua:59: attempt to call a nil value (method 'getPremiumDays')` — fired from Captain Bluebear and any NPC that calls `Player:isPremium()`. Root cause: this TFS exposes `Player:getPremiumEndsAt()` (unix timestamp) but not `Player:getPremiumDays()`. The `core/player.lua` `Player.isPremium` definition calls `getPremiumDays()` directly.
+
+Fix in `data/lib/compat/compat.lua`:
+
+```lua
+function isNumeric(n) return type(n) == 'number' end
+isNumber = isNumeric
+
+function Player.getPremiumDays(self)
+    local endsAt = self.getPremiumEndsAt and self:getPremiumEndsAt() or 0
+    if endsAt == 0 then return 0 end
+    local left = endsAt - os.time()
+    if left <= 0 then return 0 end
+    return math.floor(left / 86400)
+end
+```
+
+### Bank NPCs — `formatGold` thousand-separator + strip Lua float `.0`
+
+Suzy still saying `Your account balance is 509988.0 gold.` — Lua `tostring(number)` renders integers via the float formatter so any value > 0 prints with the `.0` suffix, and 6-7 digit balances are unreadable. User asked for `509.988` style (dot every 3 digits, no decimal).
+
+Helper added to `data/lib/compat/compat.lua` (global, available to all NPC scripts):
+
+```lua
+function formatGold(n)
+    local s = tostring(math.floor(tonumber(n) or 0))
+    local out = s:reverse():gsub('(%d%d%d)', '%1.'):reverse()
+    if out:sub(1, 1) == '.' then out = out:sub(2) end
+    return out
+end
+```
+
+Applied across **24 NPC scripts** (`bank.lua` + 23 town-banker copies that each kept their own per-NPC dialog instead of delegating to the shared `bank.lua`): `Ebenizer.lua`, `Eighty.lua`, `Elgar.lua`, `Eva.lua`, `Ferks.lua`, `Finarfin.lua`, `Gnomillion.lua`, `Jefrey.lua`, `Jessica.lua`, `Kaya.lua`, `Kepar.lua`, `Lokur.lua`, `Murim.lua`, `Muzir.lua`, `Naji.lua`, `Paulie.lua`, `Plunderpurse.lua`, `Raffael.lua`, `Rokyn.lua`, `Siestaar.lua`, `Suzy.lua`, `Virgil.lua`, `Wentworth.lua`, `Znozel.lua`.
+
+Patches done via Python regex (more reliable than 24 individual sed calls) — patterns wrapped:
+- `player:getBankBalance() .. " gold` → `formatGold(player:getBankBalance()) .. " gold`
+- `count[cid] .. " gold` / `... of your` / `... platinum coins` / `... crystal coins` / `count[cid] * 100 .. " of your` — same wrapping
+
+Numeric arithmetic (`if count[cid] < 1`, `player:depositMoney(count[cid])`, `removeItem(ITEM_GOLD_COIN, count[cid] * 100)`) intentionally NOT touched — those need raw numbers.
+
+**Lesson** (already known from earlier sessions but worth restating): town bankers in this datapack never delegate to `bank.lua`; each NPC has its own copy of the dialog. Any future bank-side change has to be applied across the 24-file group via bulk script. Same trap as the `Xodet.lua` orphan-script note from Day-8.
+
 ### Open thread
 
 - **Seller view (`CreateShopWindow`) redesign** — the second screenshot the user shared shows a different layout (description-focused, with Idle Shop / Edit Description / History buttons, slider-based price entry). Currently the seller view still uses the old slot-list layout. Picking it up next session.
