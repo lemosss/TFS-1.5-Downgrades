@@ -2793,7 +2793,7 @@
 		<attribute key="type" value="rune" />
 		<attribute key="runeSpellName" value="adevo res pox" />
 		<attribute key="weight" value="21" />
-		<attribute key="charges" value="1" />
+		<attribute key="charges" value="5" />
 	</item>
 	<item id="2293" article="a" name="magic wall rune">
 		<attribute key="type" value="rune" />
@@ -2825,7 +2825,7 @@
 		<attribute key="type" value="rune" />
 		<attribute key="runeSpellName" value="adori flam" />
 		<attribute key="weight" value="42" />
-		<attribute key="charges" value="2" />
+		<attribute key="charges" value="5" />
 	</item>
 	<item id="2303" article="a" name="fire wall rune">
 		<attribute key="type" value="rune" />
@@ -2837,7 +2837,7 @@
 		<attribute key="type" value="rune" />
 		<attribute key="runeSpellName" value="adori gran flam" />
 		<attribute key="weight" value="52" />
-		<attribute key="charges" value="2" />
+		<attribute key="charges" value="4" />
 	</item>
 	<item id="2305" article="a" name="fire bomb rune">
 		<attribute key="type" value="rune" />
@@ -2853,7 +2853,7 @@
 		<attribute key="type" value="rune" />
 		<attribute key="runeSpellName" value="adevo res flam" />
 		<attribute key="weight" value="70" />
-		<attribute key="charges" value="3" />
+		<attribute key="charges" value="5" />
 	</item>
 	<item id="2309" article="a" name="spell rune">
 		<attribute key="type" value="rune" />
@@ -2869,7 +2869,7 @@
 		<attribute key="type" value="rune" />
 		<attribute key="runeSpellName" value="adori gran" />
 		<attribute key="weight" value="21" />
-		<attribute key="charges" value="5" />
+		<attribute key="charges" value="10" />
 	</item>
 	<item id="2312" article="a" name="spell rune">
 		<attribute key="type" value="rune" />
@@ -2879,7 +2879,7 @@
 		<attribute key="type" value="rune" />
 		<attribute key="runeSpellName" value="adevo mas hur" />
 		<attribute key="weight" value="35" />
-		<attribute key="charges" value="3" />
+		<attribute key="charges" value="6" />
 	</item>
 	<item id="2314" article="a" name="spell rune">
 		<attribute key="type" value="rune" />
