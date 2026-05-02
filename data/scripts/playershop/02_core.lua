@@ -25,6 +25,65 @@ local function sanitizeText(text)
     return text
 end
 
+-- Returns the first OTHER player found in the 3x3 area (8 adjacent SQMs +
+-- the seller's own tile). Used to prevent shop barriers across staircases
+-- / chokepoints by forcing the seller to pick a clear spot.
+local function PlayerShop_OtherPlayerNearby(seller)
+    local pos = seller:getPosition()
+    local sid = seller:getId()
+    for dx = -1, 1 do
+        for dy = -1, 1 do
+            local tile = Tile(Position(pos.x + dx, pos.y + dy, pos.z))
+            if tile then
+                local creatures = tile:getCreatures() or {}
+                for _, c in pairs(creatures) do
+                    if c and c.isPlayer and c:isPlayer() and c:getId() ~= sid then
+                        return c
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Per-locker-id offset FROM the depot tile to its "behind" tile (the
+-- cardinal opposite of where buyers approach from). Each of the 4 locker
+-- sprite ids in 7.72 (items.xml `fromid=2589 toid=2592`) faces a different
+-- direction, so the "behind" offset depends on the id.
+local DEPOT_BEHIND_OFFSET = {
+    [2589] = {  0, -1 },   -- faces S -> behind = N
+    [2590] = { -1,  0 },   -- faces E -> behind = W
+    [2591] = {  0,  1 },   -- faces N -> behind = S
+    [2592] = {  1,  0 },   -- faces W -> behind = E
+}
+
+-- Returns true if the seller is standing exactly on a depot locker tile,
+-- OR on the tile DIRECTLY BEHIND a nearby locker. Just those two tiles
+-- per depot are blocked -- everything else around the depot is allowed.
+local function PlayerShop_OnBlockedDepotTile(pos)
+    local ownTile = Tile(pos)
+    if ownTile and ownTile:getItemByType(ITEM_TYPE_DEPOT) then
+        return true
+    end
+    -- Walk 4 cardinal neighbors. If any has a depot whose "behind"
+    -- offset points BACK at the seller (i.e., locker is facing AWAY
+    -- from the seller), the seller is on the locker's behind tile.
+    for _, d in ipairs({ { 0,-1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } }) do
+        local depotTile = Tile(Position(pos.x + d[1], pos.y + d[2], pos.z))
+        if depotTile then
+            local locker = depotTile:getItemByType(ITEM_TYPE_DEPOT)
+            if locker then
+                local off = DEPOT_BEHIND_OFFSET[locker:getId()]
+                if off and off[1] == -d[1] and off[2] == -d[2] then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
 -- Validate that a player is in PZ, no battle, no skull, no other shop, not in trade.
 local function canOpenShop(player)
     if not player then return false, "Invalid player." end
@@ -46,6 +105,12 @@ local function canOpenShop(player)
     end
     if skull == SKULL_BLACK then
         return false, "You have a black skull. Can't open a shop."
+    end
+    if PlayerShop_OtherPlayerNearby(player) then
+        return false, "You need a clear 3x3 SQM area around you to open a shop (no other players within 1 tile in any direction)."
+    end
+    if PlayerShop_OnBlockedDepotTile(player:getPosition()) then
+        return false, "You can't open a shop on a depot locker tile or directly behind one."
     end
     -- (getTradeState() not available in this TFS build; trade lock skipped)
     return true

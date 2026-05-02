@@ -743,6 +743,22 @@ bool Player::canSeeGhostMode(const Creature*) const
 	return group->access;
 }
 
+// Storage key set by the Lua playershop module (data/scripts/playershop/01_config.lua,
+// PlayerShopConfig.storageKey) to mark a player as currently selling. Hardcoded
+// here so the engine can let buyers walk through shop sellers without crossing
+// into Lua. If the Lua-side constant ever changes, update it here too.
+static constexpr uint32_t PLAYERSHOP_SELLING_STORAGE = 88810;
+
+static bool isPlayerActiveShopSeller(const Creature* creature)
+{
+	const Player* other = creature ? creature->getPlayer() : nullptr;
+	if (!other) {
+		return false;
+	}
+	int32_t value;
+	return other->getStorageValue(PLAYERSHOP_SELLING_STORAGE, value) && value == 1;
+}
+
 bool Player::canWalkthrough(const Creature* creature) const
 {
 	// Apenas access groups (GM/God) e creatures em ghost-mode atravessam.
@@ -754,6 +770,13 @@ bool Player::canWalkthrough(const Creature* creature) const
 	if (group->access || creature->isInGhostMode()) {
 		return true;
 	}
+	// Player shops planted on stair landings / corridors used to be a
+	// hard block; allow buyers to walk through any player whose shop
+	// is currently active so they don't have to nudge each seller in a
+	// row out of the way.
+	if (isPlayerActiveShopSeller(creature)) {
+		return true;
+	}
 	return false;
 }
 
@@ -763,6 +786,11 @@ bool Player::canWalkthroughEx(const Creature* creature) const
 	// pode atravessar outros players. Removido o walkthrough condicional
 	// em PZ pra fechar tanto setinha quanto click-to-walk de uma vez.
 	if (group->access) {
+		return true;
+	}
+	// Mirror canWalkthrough so the client renders shop sellers with the
+	// walkthrough/transparency hint -- buyers see they're passable.
+	if (isPlayerActiveShopSeller(creature)) {
 		return true;
 	}
 	return false;

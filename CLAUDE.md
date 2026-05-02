@@ -2034,3 +2034,155 @@ For paginated history demo, 30 then 40 records inserted into `playershop_history
 - `modules/game_playershop/playershop.lua` — opcode constants 139/140 + `onShopHistory` parser + register/unregister.
 - `modules/game_playershop/shop_view.lua` — empty-search hint, owner-view banner, cell tooltip translations.
 - `modules/game_interface/gameinterface.lua` — too-far message switched to `displayStatusMessage` (EN, white).
+
+---
+
+## 19. Day-12 — Walkthrough on shop sellers + open-shop tile validation + create-shop UI polish
+
+Three threads in this session:
+1. **Engine patch + client mirror** so other players can walk through a seller whose shop is currently active (no more shop-corridor barriers).
+2. **Open-shop validation**: 3x3 area must be free of other players, and seller can't be on a depot locker tile or directly behind one.
+3. **Create-shop window UI polish**: PickerCell rewrite (icon-only, tooltip-named), unified hover tint across all 3 cell types, History view widens dynamically, column dividers added, goldBox widened+right-aligned, instant menu-hook registration.
+
+### 19.1 Walkthrough on shop sellers (C++ engine + client mirror)
+
+**Problem.** A row of player shops planted on a stair landing or PZ chokepoint blocks every buyer's path: setinha (WASD), arrow keys, AND click-to-walk all hard-bounce off the seller's tile. Buyers had to push each seller out of the way one tile at a time, and the seller's `iAmSelling` anchor would warp them right back. Unusable in practice.
+
+**Server-side fix (`src/player.cpp`).** `Player::canWalkthrough` and `Player::canWalkthroughEx` are the engine's "can this player be walked over" decision points. Patched both to return true when the target creature is a Player whose `STORAGE_PLAYERSHOP_SELLING = 88810` is set to 1 (matches `PlayerShopConfig.storageKey` from `01_config.lua`):
+
+```cpp
+static constexpr uint32_t PLAYERSHOP_SELLING_STORAGE = 88810;
+
+static bool isPlayerActiveShopSeller(const Creature* creature) {
+    const Player* other = creature ? creature->getPlayer() : nullptr;
+    if (!other) return false;
+    int32_t value;
+    return other->getStorageValue(PLAYERSHOP_SELLING_STORAGE, value) && value == 1;
+}
+
+bool Player::canWalkthrough(const Creature* creature) const {
+    if (group->access || creature->isInGhostMode()) return true;
+    if (isPlayerActiveShopSeller(creature)) return true;  // NEW
+    return false;
+}
+
+bool Player::canWalkthroughEx(const Creature* creature) const {
+    if (group->access) return true;
+    if (isPlayerActiveShopSeller(creature)) return true;  // NEW
+    return false;
+}
+```
+
+`canWalkthrough` controls actual movement permission (used by `Tile::queryAdd` -> `internalMoveCreature`); `canWalkthroughEx` controls the client visual hint (semi-transparent rendering in `protocolgame.cpp:3087`'s `0x00/0x01` byte).
+
+The 88810 constant is hardcoded with a comment pointing back to the Lua source of truth — if the storage key ever changes in `01_config.lua`, update this side too.
+
+**Client-side mirror (`otcv8-dev/modules/game_walking/walking.lua`).** Initially after the C++ patch, click-to-walk worked but WASD/arrow walks died silently. Root cause: `walking.lua` line 376 does `if toTile and toTile:isWalkable() then` BEFORE sending the walk packet. `Tile:isWalkable()` returns false the moment any creature is on the destination, so the buyer's WASD step never even reached the server. Click-to-walk uses a different path (autoWalk) that doesn't run this check.
+
+Fix: before the early-return, scan `toTile:getCreatures()` for anyone in `modules.game_playershop.sellingCreatures` (the cache populated by `OPCODE_SHOP_STATE_BROADCAST`). If found, treat the destination as walkable from the client's perspective so the packet gets sent — the server then validates via the C++ `canWalkthrough` and lets the move through.
+
+```lua
+local destHasShopSeller = false
+if toTile then
+    local shopMod = modules.game_playershop
+    if shopMod and shopMod.sellingCreatures then
+        for _, c in ipairs(toTile:getCreatures() or {}) do
+            if shopMod.sellingCreatures[c:getId()] then
+                destHasShopSeller = true; break
+            end
+        end
+    end
+end
+if toTile and (toTile:isWalkable() or destHasShopSeller) then
+    ...
+```
+
+**End-to-end flow now:**
+1. Server: shop opens -> sets storage 88810 = 1 + sends STATE_BROADCAST.
+2. Buyer's client: receives STATE_BROADCAST -> caches the seller in `sellingCreatures[cid]`.
+3. Buyer presses WASD -> walking.lua sees the seller is in cache -> skips the isWalkable bounce -> sends walk packet.
+4. Server: `Tile::queryAdd` -> `canWalkthrough(seller)` -> reads storage 88810 == 1 -> returns true -> move allowed.
+5. Visually: `canWalkthroughEx` returns true -> client renders the seller semi-transparent so the buyer SEES that the tile is passable.
+
+**To revert** (in case Vanguard kills the binary or some side-effect surfaces):
+- `src/player.cpp` -> revert the `isPlayerActiveShopSeller` helper + remove the two `if` checks; rebuild.
+- `otcv8-dev/modules/game_walking/walking.lua` -> remove the `destHasShopSeller` block + revert the `if` to `if toTile and toTile:isWalkable() then`.
+
+**Build note.** Vanguard locked `tfs.exe` again on the relink. Standard workaround: `taskkill //F //IM tfs.exe` first, then rebuild. CMake build dir stays at `build/RelWithDebInfo/`.
+
+### 19.2 Open-shop tile validation
+
+Two new checks added to `canOpenShop` in `data/scripts/playershop/02_core.lua` so sellers can't park their shop on path-blocking spots.
+
+**Player nearby (3x3) — `PlayerShop_OtherPlayerNearby(seller)`**
+
+Walks the 8 adjacent SQMs + the seller's own tile. Any OTHER player found -> reject. Prevents shop-barriers across stair landings and chokepoints (where multiple sellers would form an impassable wall together with the shopping crowd).
+
+```lua
+for dx = -1, 1 do
+    for dy = -1, 1 do
+        local tile = Tile(Position(pos.x + dx, pos.y + dy, pos.z))
+        if tile then
+            for _, c in pairs(tile:getCreatures() or {}) do
+                if c and c:isPlayer() and c:getId() ~= sid then
+                    return c
+                end
+            end
+        end
+    end
+end
+```
+
+Reject message: *"You need a clear 3x3 SQM area around you to open a shop (no other players within 1 tile in any direction)."*
+
+**Depot proximity — `PlayerShop_OnBlockedDepotTile(pos)`**
+
+Iterated through several designs (3x3, 5x5 box, Manhattan-2 diamond) and landed on the **minimum useful blocking**: just two specific tiles per depot — the locker tile itself, and the tile directly behind the locker. Direction-aware via the 4 locker sprite ids:
+
+```lua
+local DEPOT_BEHIND_OFFSET = {
+    [2589] = {  0, -1 },   -- faces S -> behind = N
+    [2590] = { -1,  0 },   -- faces E -> behind = W
+    [2591] = {  0,  1 },   -- faces N -> behind = S
+    [2592] = {  1,  0 },   -- faces W -> behind = E
+}
+```
+
+Algorithm: (1) seller's own tile has `ITEM_TYPE_DEPOT`? Reject. (2) For each cardinal neighbor of the seller, if that neighbor has a depot whose `DEPOT_BEHIND_OFFSET` points back at the seller (i.e., the locker is facing AWAY from the seller, putting the seller on its back side), reject.
+
+Reject message: *"You can't open a shop on a depot locker tile or directly behind one."*
+
+**Why "minimum blocking" instead of an area buffer.** Earlier iterations used a 3x3 or 5x5 around the depot, but those rejected innocent spots that don't actually obstruct buyer access (e.g., 2 tiles diagonally from the locker on a wide PZ floor). Sellers complained the rule felt arbitrary. The locker-behind-only rule reflects the only spot a seller can stand that's both physically reachable AND on someone else's natural walking path to the depot.
+
+**Caveat about the orientation map.** The id->direction mapping (`2589 = south-facing`, etc.) is the standard convention but never directly verified against the sprite art. If you ever see a shop allowed on the actual back of a locker (or rejected on the front), swap pairs in `DEPOT_BEHIND_OFFSET` until it lines up.
+
+### 19.3 Create-shop window UI polish
+
+A bunch of small pieces of polish (already individually committed in `3ef6b18`, `5b46349`, `63ad170`) — recap here so the shape of the window is documented in one place after these landed.
+
+**PickerCell rebuilt.** Old `PickerCell` was 56x64 with the item icon at the top and a left-aligned name label below (`die`, `backpack`, `fireball.`, etc.) with a bar truncate at 8 chars. Felt Diablo-style and mismatched the rest of the Tibia-feel UI. Replaced with a clean 38x38 cell that's just the item sprite + count badge + tooltip on hover. Picker grid `cell-size` and scroll `step` updated to match. The unused `truncate()` helper was deleted.
+
+**Hover unified.** All three cell types (`PickerCell`, `ShopSellerCell`, `ShopBuyCell`) standardized at 38x38 with `$hover: background-color: #ffffff22`. The Item inside each is 34x34 centered, leaving a visible 2px frame all around for the hover tint to show through. Earlier the seller/buyer cells were 36x36 with 1px margin and the tint was barely visible.
+
+**History view widens dynamically.** Clicking History expands the create-shop window from 460 to 620 px wide and re-centers horizontally on the screen so a user docked to the right edge isn't pushed off-screen. Returning to Items mode shrinks back to 460. Without this, big price values like "12.345.678" or long buyer names would crowd the columns.
+
+**History column dividers.** Three `VerticalSeparator` widgets between the columns (Date | Buyer | Description | Price), spanning from the header top to the footer separator. Positioned 6 pixels to the LEFT of each column boundary so the line sits in the gap BEFORE the next column's text instead of bisecting the first letter of "Buyer"/"Description"/"Price". Column widths bumped (90/110/70 -> 100/140/100); separator margins followed (`margin-left: 102/242, margin-right: 124`).
+
+**goldBox in the seller window — widened + right-aligned.** Was 100 px wide with `goldLbl` having only `anchors.right: goldIcon.left` (no left anchor or text-align), so big totals visually drifted right and slid behind the gold-coin icon. Bumped to 140 px, added `anchors.left` + `text-align: right` + 6/4 px margins. Now numbers up to ~14 chars (`999.999.999`) render flush against the right edge, never overlapping the icon.
+
+**"Open Shop" menu hook is instant.** `init()` in `playershop.lua` was wrapping the `addMenuHook` calls in `scheduleEvent(..., 1500)` — defensive 1.5-second delay from early development. Result: after Ctrl+R reload, every other right-click menu entry was there immediately but "Open Shop" lagged in 1.5s later. OTC's module load order already guarantees `game_interface` is initialized before our `init()` runs (because we depend on it via `modules.game_interface.addMenuHook`), so the scheduleEvent is unnecessary. Removed; hooks now register synchronously and Open Shop appears instantly with the rest of the menu.
+
+### Files touched (Day-12)
+
+**Server (`Realera TFS 1.5`):**
+- `src/player.cpp` — `canWalkthrough` + `canWalkthroughEx` walkthrough on shop sellers; needs rebuild.
+- `data/scripts/playershop/02_core.lua` — `PlayerShop_OtherPlayerNearby` + `PlayerShop_OnBlockedDepotTile` + `DEPOT_BEHIND_OFFSET` map + 2 new checks in `canOpenShop`.
+
+**Client (`otcv8-dev`):**
+- `modules/game_walking/walking.lua` — destHasShopSeller mirror so WASD/arrow walks reach the server.
+- `modules/game_playershop/playershop.otui` — PickerCell rewrite + cell sizes/hovers unified + History column dividers + goldBox widen.
+- `modules/game_playershop/playershop.lua` — `init()` registers menu hooks synchronously.
+- `modules/game_playershop/create_shop.lua` — history mode resize-and-recenter + truncate() removed.
+- `modules/game_playershop/shop_view.lua` — tooltip thousand-separator + " g" suffix; dead `fmtGold` helper removed.
+
+**Build:** `tfs.exe` rebuilt from the `player.cpp` patch.
