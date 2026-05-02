@@ -338,6 +338,19 @@ CREATE TABLE IF NOT EXISTS `player_spells` (
   FOREIGN KEY (`player_id`) REFERENCES `players`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8;
 
+CREATE TABLE IF NOT EXISTS `playershop_history` (
+  `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `seller_guid`  INT UNSIGNED NOT NULL,
+  `buyer_name`   VARCHAR(40)  NOT NULL,
+  `item_id`      SMALLINT UNSIGNED NOT NULL,
+  `item_name`    VARCHAR(120) NOT NULL,
+  `item_count`   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  `price_total`  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `ts`           INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_seller_ts` (`seller_guid`, `ts`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE IF NOT EXISTS `player_storage` (
   `player_id` int NOT NULL DEFAULT '0',
   `key` int unsigned NOT NULL DEFAULT '0',
@@ -368,7 +381,7 @@ CREATE TABLE IF NOT EXISTS `towns` (
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8;
 
-INSERT INTO `server_config` (`config`, `value`) VALUES ('db_version', '29'), ('motd_hash', ''), ('motd_num', '0'), ('players_record', '0');
+INSERT INTO `server_config` (`config`, `value`) VALUES ('db_version', '31'), ('motd_hash', ''), ('motd_num', '0'), ('players_record', '0');
 
 DROP TRIGGER IF EXISTS `ondelete_players`;
 DROP TRIGGER IF EXISTS `oncreate_guilds`;

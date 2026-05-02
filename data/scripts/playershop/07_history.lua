@@ -11,21 +11,11 @@
 -- a maintenance script later if the table starts costing too much storage.
 -- ===========================================================================
 
--- ---- schema (idempotent at boot) ----
-db.query([[
-CREATE TABLE IF NOT EXISTS `playershop_history` (
-    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `seller_guid`  INT UNSIGNED NOT NULL,
-    `buyer_name`   VARCHAR(40)  NOT NULL,
-    `item_id`      SMALLINT UNSIGNED NOT NULL,
-    `item_name`    VARCHAR(120) NOT NULL,
-    `item_count`   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-    `price_total`  BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    `ts`           INT UNSIGNED NOT NULL,
-    PRIMARY KEY (`id`),
-    KEY `idx_seller_ts` (`seller_guid`, `ts`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-]])
+-- The `playershop_history` table is created/upgraded by the canonical
+-- migration system (data/migrations/30.lua) instead of an inline boot-time
+-- db.query here. Fresh installs get the table from schema.sql; existing
+-- installs get it from migration 30. Either way the table is guaranteed
+-- to exist by the time any of the functions below run.
 
 -- ---- record one sale ----
 -- Called from inside PlayerShop_DoBuy() right after the seller is credited
