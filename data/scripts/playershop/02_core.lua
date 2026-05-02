@@ -453,34 +453,13 @@ function PlayerShop_SendShopDataTo(buyer, sellerId)
         OpenShopWindows[buyer:getId()] = sellerId
     end
 
-    -- Compute the buyer's spendable balance: bank + cash (gold + plat*100
-    -- + crystal*10000). The 7.72 protocol doesn't push wallet info to the
-    -- client natively, so the shop UI piggybacks on SHOP_DATA.
-    local function countItemInBP(player, itemId)
-        local total = 0
-        local bp = player:getSlotItem(CONST_SLOT_BACKPACK)
-        if not bp then return 0 end
-        local stack = { bp }
-        while #stack > 0 do
-            local cur = stack[#stack]; stack[#stack] = nil
-            local size = cur:getSize() or 0
-            for i = 0, size - 1 do
-                local it = cur:getItem(i)
-                if it then
-                    if it:getId() == itemId then
-                        total = total + (it:getCount() or 1)
-                    end
-                    if ItemType(it:getId()):isContainer() then
-                        stack[#stack + 1] = it
-                    end
-                end
-            end
-        end
-        return total
-    end
-    local cash = countItemInBP(buyer, 2148)
-              + countItemInBP(buyer, 2152) * 100
-              + countItemInBP(buyer, 2160) * 10000
+    -- Compute the buyer's spendable balance: bank + cash. Use TFS' built-in
+    -- Player:getMoney() which already scans EVERY inventory slot (hands,
+    -- ammo, bp, etc.) plus all nested containers and converts plat/crystal
+    -- coins to gold equivalent. This must match what PlayerShop_DoBuy uses
+    -- when actually charging the buyer (line ~551), otherwise the UI shows
+    -- a different total than what the player can actually spend.
+    local cash = (buyer.getMoney and buyer:getMoney()) or 0
     local bank = (buyer.getBankBalance and buyer:getBankBalance()) or 0
     local total = cash + bank
     if total > 0xFFFFFFFF then total = 0xFFFFFFFF end
