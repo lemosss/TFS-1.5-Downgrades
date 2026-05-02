@@ -2186,3 +2186,258 @@ A bunch of small pieces of polish (already individually committed in `3ef6b18`, 
 - `modules/game_playershop/shop_view.lua` — tooltip thousand-separator + " g" suffix; dead `fmtGold` helper removed.
 
 **Build:** `tfs.exe` rebuilt from the `player.cpp` patch.
+
+---
+
+## Day-13 — Inventory swap + premium overflow + free-account travel + rune NPC re-enable + Open Shop sprite + Yalahar cleanup
+
+### Cross-session debugging note: this server now lives in `Realera OT/Realera TFS 1.5/`
+
+The folder was reorganized this day from `Desktop/Realera TFS 1.5/` to
+`Desktop/Realera OT/Realera TFS 1.5/`. The OTC client moved the same way:
+`Desktop/Realera OT/otclientv80/`. Several hours were wasted today
+editing `Desktop/OT/TFS-1.5-Downgrades/` (a parallel 7.72 project) NPCs
+while the user was actually testing this Realera 8.0 server. The
+auto-loaded CLAUDE.md when the cwd is `Desktop/OT/` now warns to verify
+which server is actually running before editing — see
+`Desktop/OT/CLAUDE.md` top banner.
+
+### Per-rune stack cap (`Item::getStackMax()`)
+
+OTB flags every rune `FLAG_STACKABLE`, but the engine had `100` hardcoded
+all over the inventory code so a player could drag a 4-stack of GFB onto
+another 4-stack and end up with 8 charges in one slot — beyond the rune's
+`<charges>` value. Added an inline helper:
+
+```cpp
+// src/item.h
+uint32_t getStackMax() const {
+    const ItemType& it = items[id];
+    if (it.isRune() && it.charges > 0) {
+        return it.charges;          // SD=1, UH=1, GFB=4, HMM=10, WG=2 …
+    }
+    return 100;                     // gold/spear/arrow stay at 100
+}
+```
+
+12 sites of literal `100` swapped to `someItem->getStackMax()`:
+`container.cpp` 370/372/378/380/386/481/488,
+`game.cpp` 1210/1322,
+`player.cpp` 2590/2591/2599/2616/2617.
+
+Don't grep `\b100\b` blindly — most hits are percentages / weight
+thresholds / loot chances. Look for `100 - .*itemCount` and
+`getItemCount() < 100`.
+
+### Drag-drop runes as a whole stack (otclientv80 client)
+
+8.0 `Tibia.dat` flags runes as **charge** items, not stackable. So in OTC
+`item:getCount()` returns 1 always for runes; the visible byte (server
+stack count) lives in `item:getCountOrSubType()`. Default OTC drag
+handlers gate the count-prompt on `getCount() > 1`, so dropping a 5-stack
+of GFB on the floor only sent count=1 → 1 rune moved per drop.
+
+Both `modules/gamelib/ui/uiitem.lua` and
+`modules/game_interface/widgets/uigamemap.lua`:
+
+```lua
+local id = item:getId()
+if id >= 3147 and id <= 3203 then
+    -- 8.0 client.dat rune range (server ids 2260-2316). Whole stack.
+    local stack = item:getCountOrSubType()
+    if stack < 1 then stack = 1 end
+    g_game.move(item, toPos, stack)
+elseif item:getCount() > 1 then
+    modules.game_interface.moveStackableItem(item, toPos)
+else
+    g_game.move(item, toPos, 1)
+end
+```
+
+**The 3147-3203 range was derived empirically.** OTC's `Item:getId()`
+returns the dat clientId, NOT the server itemid. Standard 7.x dat had
+runes at 2260-2316 (matching server ids), but the 8.0 dat shifts them
+into 3147-3203. Walked `parse_otb.py` over the rune block in items.xml to
+read the (serverId → clientId) mapping; verified live with debug prints
+during a real drag (fireball server 2302 → client 3189; explosion 2313
+→ 3200; SD 2268 → 3155; backpack 1988 → 2854).
+
+### Player Shop sprite renders the wrong item — fix
+
+User reported: a backpack inside an Open Shop window rendered as a
+stone coffin, even though spawning the same item via `/i` showed the
+correct backpack.
+
+Root cause: `data/scripts/playershop/02_core.lua` was packing the server
+itemid into the extended-opcode payload that builds the trade window:
+
+```lua
+-- Wrong (sends server id 1988):
+payload = payload .. PlayerShop_PackU16(entry.itemId)
+-- Right (sends client id 2854 for backpack):
+payload = payload .. PlayerShop_PackU16(it:getClientId())
+```
+
+The OTC widget's `setItemId()` indexes `Tibia.dat`, so it expects the
+**clientId**. The standard NPC trade window is fine because TFS itself
+converts via `it.clientId` in `protocolgame.cpp:AddShopItem`. Custom
+extended opcodes have to do the conversion manually. Fixed both shop
+sites in 02_core.lua (line 467 buyer view, line 704 owner picker).
+
+**Pattern to remember**: any time a Lua script ships an item id over
+`sendExtendedOpcode` for a widget render, wrap with
+`ItemType(serverId):getClientId()`.
+
+### Equipment slot swap from ground / container
+
+`Player::queryAdd` only returned `RETURNVALUE_NEEDEXCHANGE` (the swap
+trigger) when the source cylinder was a `Player` slot or `DepotChest`.
+Dragging from a `Tile` (ground) or `Container` (backpack) onto an
+already-equipped slot fell through to `NOTENOUGHROOM` ("there is not
+enough room"). Added `Tile` and `Container` to the cast list at
+`player.cpp:2580` — equipping a sword off the floor now drops the
+currently-held weapon to the same tile, mirroring DP-to-slot behavior.
+
+### Premium-days uint16 overflow on free accounts
+
+`protocollogin.cpp:135`:
+
+```cpp
+output->add<uint16_t>((account.premiumEndsAt - time(nullptr)) / 86400);
+```
+
+For a free account `premiumEndsAt = 0`, the subtraction gave a large
+negative `time_t` that wrapped into uint16 as ~44961 days. Every free
+account showed "44961 days of premium" on the login screen (and possibly
+unlocked premium gating elsewhere if the client trusted the value).
+Clamp to 0 when `premiumEndsAt <= now`. C++ change, requires rebuild.
+
+### Free-account travel restricted to free cities only
+
+The captains' local `addTravelKeyword` helpers all passed
+`premium = false` to `StdModule.travel`. Combined with the
+`not parameters.premium` short-circuit at modules.lua:209, every
+destination from every captain was free-account-accessible. Cipsoft 8.0
+rule: **free accounts only travel to Thais, Carlin, Venore, Ab'Dendriel,
+Kazordoon**. Anything else is premium.
+
+Single source of truth in `data/lib/miscellaneous/free_cities.lua`:
+
+```lua
+FREE_CITY_DESTINATIONS = {
+    ['thais']=true, ['carlin']=true, ['venore']=true,
+    ["ab'dendriel"]=true, ['ab\'dendriel']=true, ['kazordoon']=true,
+}
+function isPremiumDestination(keyword)
+    if not keyword then return true end
+    return not FREE_CITY_DESTINATIONS[string.lower(keyword)]
+end
+```
+
+29 captain scripts had their hardcoded `premium = false` replaced with
+`premium = isPremiumDestination(keyword)` (31 sites total — Captain
+Fearless and Jack Fate have two travel branches each). Same regex-
+friendly pattern across all captain files: the local
+`addTravelKeyword(keyword, ...)` function passes its first arg to the
+helper. **To change the policy later, edit ONLY the table in
+`free_cities.lua`.**
+
+### Travel cost L>=50 gate removed
+
+Two paths in `data/npc/lib/npcsystem/modules.lua` had
+`if cost and cost > 0 and player:getLevel() >= 50 then`:
+- `StdModule.travel` (the one that actually charges money)
+- `StdModule.say` (the dialog renderer that announces the cost)
+
+Net effect on a level-49 player: NPC said "for free" but the .travel
+path silently charged the cost (after I removed the gate from .travel
+earlier in the session). The dialog was lying. Removed `>= 50` from BOTH
+so the announced cost matches the deducted cost, regardless of level.
+
+### Yalahar removed from active captains
+
+Yalahar is Tibia 8.5; this server's .otbm has no Yalahar geometry. The
+captains had `addTravelKeyword('yalahar', Position(32816, 31272, 6), …)`
+guarded by storage flags that turn the captain into "I'm sorry but I
+don't sail there" — but the destination is unmapped. Stripped:
+
+- 9 `addTravelKeyword('yalahar', …)` lines across Bluebear, Fearless,
+  Greyhound, Max, Seagull, Sinbeard, Charles, Jack Fate, Petros.
+- 44 dialog/voice text lines across 11 captains had `{Yalahar}` /
+  `, Yalahar` mentions cleaned. Regex scoped to lines containing
+  `keywordHandler:addKeyword` / `local voices` / `npcHandler:say(` so
+  identifiers like `Storage.InServiceofYalahar` stay intact (the latter
+  is used by quest NPCs that now live in `data/npc/deadfiles/`).
+
+### Quest NPCs without spawns moved to deadfiles
+
+The "In Service of Yalahar" questline (Tibia 8.5) was imported into
+this server but never had spawns set up — the city doesn't exist. Moved
+the dormant quest NPC files (no spawn entries in `global-spawn.xml`) to
+`data/npc/deadfiles/`:
+
+- `Yalahari` (Mission 03 quest giver)
+- `Mr. West` / `Mr West.lua` (Mission 04)
+- `Tamerin` (Mission 05)
+- `Maritima` (Mission 07)
+
+`Palimuth` (Mission 01) and the seven Mission 02 watchmen (Barry, Bruce,
+Hal, Oliver, Peter, Reed, Tony) were already in deadfiles before this
+session.
+
+**Policy: do NOT touch `global-spawn.xml`.** When in doubt about
+removing a script/NPC, check if the spawn entry exists. If yes, leave
+the script in place (a missing XML/script with a live spawn throws a
+boot warning that the user accepts). Siflind is the canonical example —
+Ice Islands quest NPC, spawn at (32361, 31029, 6) in Svargrond region.
+Almost moved to deadfiles before noticing the spawn; restored.
+
+### `maxMessageBuffer` 4 → 8
+
+Player got muted after 4 messages in 1500ms. Bumped to 8 in `config.lua`.
+Decay window in `player.cpp:1514` (1500ms) untouched. **`config.lua` is
+gitignored** so this change doesn't ship via git — re-applied per
+instance.
+
+### NPC name conventions discovered the hard way
+
+Saw on the Day-12 / earlier sessions: the OT/ tree had 12 NPCs all
+declaring `script="Xodet.lua"` — Frans.lua / Rachel.lua / topsy.lua were
+orphan code never loaded. **Same trap exists here**: always grep
+`grep -l 'script="<NPC>.lua"' data/npc/*.xml` before editing a
+per-script file. Today specifically, "Mr. West.xml" (with dot) referenced
+"Mr West.lua" (without dot); "Siflind.xml" (typo) referenced
+"Silfind.lua". Names don't have to match.
+
+### Day-13 file index
+
+Realera server (this repo):
+- `src/item.h` — `getStackMax()` helper
+- `src/container.cpp`, `src/game.cpp`, `src/player.cpp` — 12 hardcoded
+  `100` replaced + slot-swap cylinder cast list
+- `src/protocollogin.cpp` — premium days clamp
+- `data/scripts/playershop/02_core.lua` — `getClientId()` for sprite
+- `data/lib/miscellaneous/free_cities.lua` (new)
+- `data/lib/lib.lua` — register free_cities.lua
+- `data/npc/lib/npcsystem/modules.lua` — `StdModule.travel` and
+  `StdModule.say` `>=50` removal
+- 29 captain scripts (Bluebear, Fearless, Charles, Greyhound, Max,
+  Seagull, Seahorse, Sinbeard, Anderson, Buddel, Brodrosch, Captain
+  Breezelda, Carlson, Chemar, Gewen, Gurbasch, Imbul, Iyad, Jack Fate,
+  Lorek, Maris Fenrock, Nielson, Old Adall, Pemaret, Petros, Pino,
+  Sebastian Nargor, Sebastian, Svenson, Uzon) — premium policy via
+  helper. Of those, 11 also had Yalahar text stripped.
+- `data/npc/deadfiles/` (gitignored, NOT committed): dormant Yalahar
+  quest NPCs (Yalahari/Maritima/Mr. West/Tamerin xml+lua + previously
+  parked entries)
+
+`Realera OT/otclientv80/`:
+- `modules/gamelib/ui/uiitem.lua` and
+  `modules/game_interface/widgets/uigamemap.lua` — rune drag whole-stack
+
+Git remotes pushed:
+- `lemosss/TFS-1.5-Downgrades` branch `8.0` (server)
+- `lemosss/otclientv8` branch `master` (client)
+
+**Builds**: `tfs.exe` rebuilt three times this session — for the stack-
+cap patch, the inventory swap, and the premium overflow.
