@@ -29,6 +29,8 @@ PlayerShopOpcode = {
     VIP_STATUS        = 136, -- S->C: VIP entry opened/closed shop
     INVENTORY_LIST    = 137, -- S->C: inventory snapshot for the create-shop window
     REJECT            = 138, -- S->C: reject reason text
+    HISTORY_REQUEST   = 139, -- C->S: u16 page, u16 pageSize -- fetch sales log
+    HISTORY           = 140, -- S->C: paginated history page (see 07_history.lua)
 }
 
 -- ---- runtime tables (in-memory) ----

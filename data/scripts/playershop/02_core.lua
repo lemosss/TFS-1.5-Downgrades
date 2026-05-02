@@ -589,6 +589,19 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
     -- ----- CREDIT SELLER (bank) -----
     seller:setBankBalance((seller:getBankBalance() or 0) + total)
 
+    -- ----- LOG TO HISTORY -----
+    -- Async INSERT into playershop_history. Survives restarts and reboots,
+    -- viewable later via the History tab in the create-shop window.
+    if PlayerShop_LogSale then
+        PlayerShop_LogSale(
+            seller:getId(),
+            buyer:getName(),
+            entry.itemId,
+            (itType.getName and itType:getName()) or "item",
+            qty,
+            total)
+    end
+
     -- ----- UPDATE STOCK -----
     entry.count = entry.count - qty
     if entry.count <= 0 then

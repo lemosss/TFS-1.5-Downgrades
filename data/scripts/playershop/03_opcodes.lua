@@ -77,6 +77,14 @@ function PlayerShop_DispatchOpcode(player, opcode, buffer)
 
     elseif opcode == PlayerShopOpcode.INVENTORY_LIST then
         PlayerShop_SendInventoryList(player)
+
+    elseif opcode == PlayerShopOpcode.HISTORY_REQUEST then
+        local r = Reader.new(buffer)
+        local page     = r:u16()
+        local pageSize = r:u16()
+        if PlayerShop_SendHistoryPage then
+            PlayerShop_SendHistoryPage(player, page, pageSize)
+        end
     end
 end
 
