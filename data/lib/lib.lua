@@ -11,3 +11,4 @@ dofile('data/lib/quests/quest.lua')
 
 -- Miscellaneous library
 dofile('data/lib/miscellaneous/miscellaneous.lua')
+dofile('data/lib/miscellaneous/free_cities.lua')

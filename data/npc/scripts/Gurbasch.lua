@@ -13,7 +13,7 @@ npcHandler:addModule(VoiceModule:new(voices))
 -- Travel
 local function addTravelKeyword(keyword, text, cost, discount, destination)
 	local travelKeyword = keywordHandler:addKeyword({keyword}, StdModule.say, {npcHandler = npcHandler, text = text[1], cost = cost, discount = discount})
-		travelKeyword:addChildKeyword({'yes'}, StdModule.travel, {npcHandler = npcHandler, premium = false, text = text[2], cost = cost, discount = discount, destination = destination})
+		travelKeyword:addChildKeyword({'yes'}, StdModule.travel, {npcHandler = npcHandler, premium = isPremiumDestination(keyword), text = text[2], cost = cost, discount = discount, destination = destination})
 		travelKeyword:addChildKeyword({'no'}, StdModule.say, {npcHandler = npcHandler, text = text[3], reset = true})
 end
 

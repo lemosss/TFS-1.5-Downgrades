@@ -132,7 +132,12 @@ void ProtocolLogin::getCharacterList(const std::string& accountName, const std::
 	} else {
 		//output->addByte(account.premiumEndsAt > time(nullptr) ? 1 : 0);
 		//output->add<uint32_t>(account.premiumEndsAt);
-		output->add<uint16_t>((account.premiumEndsAt - time(nullptr)) / 86400);
+		// Free accounts have premiumEndsAt=0; subtracting current time gives a
+		// negative delta that wraps into a huge uint16 (~44961 days). Clamp to
+		// 0 when the account is not premium.
+		const time_t now = time(nullptr);
+		const time_t remaining = account.premiumEndsAt > now ? account.premiumEndsAt - now : 0;
+		output->add<uint16_t>(std::min<time_t>(0xFFFF, remaining / 86400));
 	}
 
 	send(output);
