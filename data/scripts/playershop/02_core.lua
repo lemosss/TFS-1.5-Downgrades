@@ -231,11 +231,12 @@ function PlayerShop_Open(player, payload)
                             if idMatches and not hasContent then
                                 local c = it:getCount() or 1
                                 local pulled = math.min(c, left)
-                                if c <= left then
-                                    it:remove()
-                                else
-                                    it:setCount(c - left)
-                                end
+                                -- Item:setCount() is NOT bound in this TFS
+                                -- build; Item:remove(n) is the canonical way
+                                -- to subtract from a stackable. internalRemoveItem
+                                -- removes exactly `n` and keeps (c-n) on the
+                                -- same instance when n < c.
+                                it:remove(pulled)
                                 left = left - pulled
                                 byDepotId[depotId] = (byDepotId[depotId] or 0) + pulled
                             elseif isCont then
@@ -591,10 +592,13 @@ function PlayerShop_Buy(buyer, sellerId, slot, qty)
 
     -- ----- LOG TO HISTORY -----
     -- Async INSERT into playershop_history. Survives restarts and reboots,
-    -- viewable later via the History tab in the create-shop window.
+    -- viewable later via the History tab in the create-shop window. Uses
+    -- getGuid() (persistent DB pk) instead of getId() (runtime creature id
+    -- that changes every login) so the log can be looked up across
+    -- sessions.
     if PlayerShop_LogSale then
         PlayerShop_LogSale(
-            seller:getId(),
+            seller:getGuid(),
             buyer:getName(),
             entry.itemId,
             (itType.getName and itType:getName()) or "item",

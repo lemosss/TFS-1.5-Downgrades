@@ -102,8 +102,11 @@ end
 --   per entry: u32 ts, str buyer, str itemName, u16 count, u32 priceTotal
 function PlayerShop_SendHistoryPage(player, page, pageSize)
     if not player then return end
+    -- getGuid() = persistent DB pk; getId() would give the runtime creature
+    -- id which is reassigned on every login, so the lookup wouldn't match
+    -- rows logged in previous sessions.
     local entries, totalEntries, totalPages =
-        PlayerShop_FetchHistory(player:getId(), page, pageSize)
+        PlayerShop_FetchHistory(player:getGuid(), page, pageSize)
 
     local payload = PlayerShop_PackU16(page)
                  .. PlayerShop_PackU16(totalPages)
