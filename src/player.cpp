@@ -2578,8 +2578,16 @@ ReturnValue Player::queryAdd(int32_t index, const Thing& thing, uint32_t count, 
 	//need an exchange with source? (destination item is swapped with currently moved item)
 	const Item* inventoryItem = getInventoryItem(static_cast<slots_t>(index));
 	if (inventoryItem && (!inventoryItem->isStackable() || inventoryItem->getID() != item->getID())) {
+		// Allow swapping the equipped item out to: another player slot,
+		// the depot, the floor (Tile) or any container (backpack on the
+		// player or open in front of them). Without these casts the engine
+		// returns "there is not enough room" instead of swapping when the
+		// drag source is the ground or a backpack.
 		const Cylinder* cylinder = item->getTopParent();
-		if (cylinder && (dynamic_cast<const DepotChest*>(cylinder) || dynamic_cast<const Player*>(cylinder))) {
+		if (cylinder && (dynamic_cast<const DepotChest*>(cylinder)
+		              || dynamic_cast<const Player*>(cylinder)
+		              || dynamic_cast<const Tile*>(cylinder)
+		              || dynamic_cast<const Container*>(cylinder))) {
 			return RETURNVALUE_NEEDEXCHANGE;
 		}
 
