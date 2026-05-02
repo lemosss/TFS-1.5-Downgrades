@@ -59,7 +59,7 @@ if Modules == nil then
 
 		local player = Player(cid)
 		local cost, costMessage = parameters.cost, '%d gold coins'
-		if cost and cost > 0 and player:getLevel() >= 50 then
+		if cost and cost > 0 then
 			if parameters.discount then
 				cost = cost - StdModule.travelDiscount(player, parameters.discount)
 			end
@@ -194,7 +194,7 @@ if Modules == nil then
 
 		local player = Player(cid)
 		local cost = parameters.cost
-		if cost and cost > 0 and player:getLevel() >= 50 then
+		if cost and cost > 0 then
 			if parameters.discount then
 				cost = cost - StdModule.travelDiscount(player, parameters.discount)
 
