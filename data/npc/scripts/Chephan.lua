@@ -48,4 +48,9 @@ keywordHandler:addKeyword({'good'}, StdModule.say, {npcHandler = npcHandler, onl
 keywordHandler:addKeyword({'sell'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "That would be: Buckets, bottles, mugs, cups, jugs, plates, baking trays, pots, pans, forks, spoons, knifes, wooden spoons, cleavers, spatulas, and rolling pins."})
 keywordHandler:addKeyword({'have'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "That would be: Buckets, bottles, mugs, cups, jugs, plates, baking trays, pots, pans, forks, spoons, knifes, wooden spoons, cleavers, spatulas, and rolling pins."})
 
+
+-- migrated from XML shop_buyable/shop_sellable
+shopModule:addBuyableItem({'Bucket'}, 7142, 4, 1, 'Bucket')
+shopModule:addBuyableItem({'Jug'}, 7243, 10, 1, 'Jug')
+
 npcHandler:addModule(FocusModule:new())

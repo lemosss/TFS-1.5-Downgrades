@@ -29,4 +29,9 @@ shopModule:addBuyableItem({'strawberry'}, 2680, 2, 1,'strawberry')
 shopModule:addBuyableItem({'white mushroom'}, 2787, 10, 1,'white mushroom')
 shopModule:addBuyableItem({'sample of venorean spice'}, 4849, 200, 1,'sample of venorean spice')
 
+
+-- migrated from XML shop_buyable/shop_sellable
+shopModule:addBuyableItem({'bottle of milk'}, 2007, 15, 6, 'bottle of milk')
+shopModule:addBuyableItem({'sample of venorean spice'}, 9675, 200, 1, 'sample of venorean spice')
+
 npcHandler:addModule(FocusModule:new())

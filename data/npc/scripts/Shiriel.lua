@@ -34,4 +34,17 @@ keywordHandler:addKeyword({'excalibug'}, StdModule.say, {npcHandler = npcHandler
 keywordHandler:addKeyword({'new'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "News are secrets and you are not worthy of my secrets."})
 keywordHandler:addKeyword({'magic'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I could teach you some spells ... but I won't."})
 
+
+-- migrated from XML shop_buyable/shop_sellable
+shopModule:addBuyableItem({'snakebite rod'}, 2182, 500, 1, 'snakebite rod')
+shopModule:addBuyableItem({'wand of vortex'}, 2190, 500, 1, 'wand of vortex')
+shopModule:addBuyableItem({'quagmire rod'}, 2181, 10000, 1, 'quagmire rod')
+shopModule:addBuyableItem({'snakebite rod'}, 2182, 500, 1, 'snakebite rod')
+shopModule:addBuyableItem({'moonlight rod'}, 2186, 1000, 1, 'moonlight rod')
+shopModule:addBuyableItem({'volcanic rod'}, 2185, 5000, 1, 'volcanic rod')
+shopModule:addBuyableItem({'tempest rod'}, 2183, 15000, 1, 'tempest rod')
+shopModule:addBuyableItem({'wand of dragonbreath'}, 2191, 1000, 1, 'wand of dragonbreath')
+shopModule:addBuyableItem({'wand of plauge'}, 2188, 5000, 1, 'wand of plauge')
+shopModule:addBuyableItem({'wand of cosmic energy'}, 2189, 10000, 1, 'wand of cosmic energy')
+
 npcHandler:addModule(FocusModule:new())

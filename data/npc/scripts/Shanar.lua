@@ -103,4 +103,15 @@ keywordHandler:addKeyword({'trousers'}, StdModule.say, {npcHandler = npcHandler,
 keywordHandler:addKeyword({'legs'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I am selling chain legs. Do you want to buy any?"})
 keywordHandler:addKeyword({'spellbook'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I have none here."})
 
+
+-- migrated from XML shop_buyable/shop_sellable
+shopModule:addBuyableItem({'axe'}, 2386, 20, 1, 'axe')
+shopModule:addBuyableItem({'battle axe'}, 2378, 235, 1, 'battle axe')
+shopModule:addBuyableItem({'battle hammer'}, 2417, 350, 1, 'battle hammer')
+shopModule:addBuyableItem({'bone sword'}, 2450, 75, 1, 'bone sword')
+shopModule:addBuyableItem({'carlin sword'}, 2395, 473, 1, 'carlin sword')
+shopModule:addSellableItem({'axe'}, 2386, 7, 'axe')
+shopModule:addSellableItem({'battle axe'}, 2378, 80, 'battle axe')
+shopModule:addSellableItem({'battle hammer'}, 2417, 120, 'battle hammer')
+
 npcHandler:addModule(FocusModule:new())

@@ -74,4 +74,18 @@ keywordHandler:addKeyword({'have'}, StdModule.say, {npcHandler = npcHandler, onl
 keywordHandler:addKeyword({'offer'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I have shovels, picks, scythes, bags, ropes, backpacks, plates, scrolls, watches, some lightsources, and other stuff."})
 keywordHandler:addKeyword({'stuff'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Water hoses, pitchforks, presents, buckets, bottles, and the like."})
 
+
+-- migrated from XML shop_buyable/shop_sellable
+shopModule:addBuyableItem({'basket'}, 1989, 6, 1, 'basket')
+shopModule:addBuyableItem({'bottle'}, 2007, 3, 0, 'bottle')
+shopModule:addBuyableItem({'candlestick'}, 2047, 2, 1, 'candlestick')
+shopModule:addBuyableItem({'closed trap'}, 2578, 280, 1, 'closed trap')
+shopModule:addBuyableItem({'crowbar'}, 2416, 260, 1, 'crowbar')
+shopModule:addBuyableItem({'machete'}, 2420, 35, 1, 'machete')
+shopModule:addBuyableItem({'parchment'}, 1951, 8, 1, 'parchment')
+shopModule:addSellableItem({'closed trap'}, 2578, 75, 'closed trap')
+shopModule:addSellableItem({'crowbar'}, 2416, 50, 'crowbar')
+shopModule:addSellableItem({'machete'}, 2420, 6, 'machete')
+shopModule:addSellableItem({'wooden hammer'}, 2556, 15, 'wooden hammer')
+
 npcHandler:addModule(FocusModule:new())
