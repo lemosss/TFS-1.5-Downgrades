@@ -184,6 +184,3 @@ pip-log.txt
 ## TFS / OT
 #############
 config.lua
-
-## Database backups (may contain account passwords / IPs)
-dumps/
