@@ -1112,3 +1112,19 @@ function doCreateItemEx(itemid, count)
 end
 
 function doMoveCreature(cid, direction) local c = Creature(cid) return c ~= nil and c:move(direction) end
+
+-- Audit-log helper used by some GM talkactions (/reload, /force_raid, ...).
+-- TFS 1.5 ships these scripts with a logCommand call but never defines the
+-- function in any lib. Stub it as a console print + flat-file append so the
+-- GM commands stop crashing with "attempt to call a nil value".
+function logCommand(player, words, param)
+	local name = (player and player.getName and player:getName()) or '?'
+	local line = string.format('[%s] %s: %s %s',
+		os.date('%Y-%m-%d %H:%M:%S'), name, words or '', param or '')
+	print(line)
+	local f = io.open('data/logs/commands.log', 'a')
+	if f then
+		f:write(line, '\n')
+		f:close()
+	end
+end
