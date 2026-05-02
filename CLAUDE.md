@@ -1882,3 +1882,155 @@ The wrapper keeps the `cellPlus` id so `cell.cellPlus:setVisible(true/false)` (c
 - `modules/game_playershop/playershop.lua` — `onStateBroadcast` clears draft cache on confirmed open; minor tidy.
 
 No server-side changes today.
+
+---
+
+## 18. Day-11 — Sales history (lifetime SQL log) + scrollbar polish + rune-shop crash root fix
+
+Big day. Three independent threads landed:
+1. Full **History tab** in the create-shop window (paginated lifetime sales log, SQL-backed).
+2. **Scrollbar / X clear button alignment** + EN translation pass on residual PT-BR strings.
+3. **Root-cause fix** for the native crash that happened when cancelling a shop with runes listed.
+
+Branches: `lemosss/TFS-1.5-Downgrades` 8.0 (server) and `lemosss/otcv8-dev` master (client).
+
+### History tab — server side (`Realera TFS 1.5`)
+
+New revscript `data/scripts/playershop/07_history.lua` creates and queries `playershop_history`:
+
+```sql
+CREATE TABLE IF NOT EXISTS `playershop_history` (
+    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `seller_guid`  INT UNSIGNED NOT NULL,
+    `buyer_name`   VARCHAR(40)  NOT NULL,
+    `item_id`      SMALLINT UNSIGNED NOT NULL,
+    `item_name`    VARCHAR(120) NOT NULL,
+    `item_count`   SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    `price_total`  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `ts`           INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_seller_ts` (`seller_guid`, `ts`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+```
+
+Schema runs idempotently at boot via `db.query`. Three Lua entry points:
+
+- `PlayerShop_LogSale(sellerGuid, buyerName, itemId, itemName, count, priceTotal)` — wired into `PlayerShop_DoBuy` (`02_core.lua` line ~590) right after the seller is bank-credited. Uses `db.asyncQuery` so the BUY transaction never blocks on disk. Defensive truncation (40/120 chars) protects against malformed names blowing up the INSERT.
+- `PlayerShop_FetchHistory(sellerGuid, page, pageSize)` — `LIMIT/OFFSET` over the `(seller_guid, ts DESC, id DESC)` ordering. Returns `(entries, totalEntries, totalPages)`. Page is 1-indexed; pageSize defaults to 20 (clamped to 1..100).
+- `PlayerShop_SendHistoryPage(player, page, pageSize)` — wraps fetch into the OPCODE_SHOP_HISTORY wire payload.
+
+Two new opcodes (in `01_config.lua` `PlayerShopOpcode` and the matching client constants):
+
+- `HISTORY_REQUEST = 139` — C→S: `u16 page, u16 pageSize`
+- `HISTORY = 140` — S→C: `u16 currentPage, u16 totalPages, u32 totalEntries, u16 entryCount, then per entry: u32 ts, str buyer, str itemName, u16 count, u32 priceTotal`
+
+`03_opcodes.lua` dispatches `HISTORY_REQUEST` to `SendHistoryPage`.
+
+### History tab — client side (`otcv8-dev`)
+
+`CreateShopWindow` was redesigned — bottom row reordered to match the Onigashima reference screenshot:
+
+```
+[gold-counter] [Start Shop] ───── [History] [Close]   ← items mode (default)
+[gold-counter] [Start Shop] ───── [Items]   [Close]   ← history mode
+```
+
+OTUI changes:
+- `cancelBtn` renamed to `closeBtn` (semantic cleanup).
+- `summaryBox` (text "X items, total: Y gold") replaced by `goldBox` matching the buyer view: panel_flat + image-border + UIItem goldIcon (3031 = client.dat gold coin id) + Label `goldLbl` showing thousand-separated total expected revenue.
+- `historyBtn` and `itemsBtn` declared at the same anchor, toggled via `setVisible`.
+- New `historyPanel` overlaying the items grid area when active: header row (`Date | Buyer | Description | Price`), `histHeaderSep`, scrollable `histListPanel` (verticalBox layout), `histFooterSep`, footer with `histEntries` label + centered pagination cluster `|< < N/M > >|`. New `HistoryRow` style — 16px tall thin row holding `rowDate / rowBuyer / rowDesc / rowPrice` labels (anchored Date→Buyer→Desc(flex)→Price right-aligned).
+- `descClearBtn` and `searchClearBtn` got `margin-right: 3` so their right edge lines up with the scrollbar's right edge instead of sticking 3px past it.
+
+Lua changes (`create_shop.lua`):
+- `historyMode` boolean + `historyCurrentPage / historyTotalPages / historyTotalEntries` module-scope state. `HISTORY_PAGE_SIZE = 20`.
+- `enterHistoryMode()` / `enterItemsMode()` flip visibility of `ITEMS_MODE_WIDGETS = { 'shopText', 'descLbl', 'descClearBtn', 'slotsPanel', 'scrollBar', 'infoPanel' }` against `historyPanel` and swap the bottom-right buttons.
+- `requestHistoryPage(n)` clears the list, updates pagination state, sends OPCODE_SHOP_HISTORY_REQUEST with `(page, HISTORY_PAGE_SIZE)`.
+- `renderHistoryEntries(entries)` (called from `onShopHistory` in `playershop.lua`) destroys the list children and builds one `HistoryRow` per entry. Date formatted as `DD/MM HH:MM` (locale-agnostic, fits 90px column). Description is `'%dx %s'` for count > 1 else just the name; tooltip set on overflow.
+- `refreshHistoryFooter()` updates `histEntries`/`histPageLbl` and enables/disables pagination buttons (`|<` `<` disabled at page 1, `>` `>|` disabled at last page).
+- `openCreateShop` resets `historyMode=false`/`page=1` so the next session always starts on the items grid.
+
+`HistoryRow` initially had a `$hover: background-color: #ffffff14` tint that made the rows flicker as the mouse moved; user disliked it, removed (commit `7b6ca5a`).
+
+### Scrollbar polish
+
+The three vertical scrollbars (picker / create / buyer) and the horizontal `amountScroll` were aligned to match the MiniWindow scrollbar visual model used by Skills/Inventory:
+
+| | Before | After |
+|---|---|---|
+| `pickScrollBar width` | 12 (override) | default 13 |
+| All 3 verticals `margin-right` | 0 | 3 |
+| `amountScroll pixels-scroll` | (not set) | true |
+| `amountScroll step` | (default) | 1 |
+
+Always-visible (NO `$!on: width: 0` — user explicitly wanted the bar fixed, not collapsing-on-fit like MiniWindow).
+
+### Residual PT-BR translations
+
+Found and translated:
+- `'Voce esta longe demais. Aproxime-se do vendedor.'` (red `displayBroadcastMessage` in `gameinterface.lua` left-click intercept) → `'You are too far away. Get closer to the seller.'` via `displayStatusMessage` (white above chat).
+- `'(nenhum item bate com a busca)'` / `'(esta loja nao tem itens)'` → `'(no items match the search)'` / `'(this shop has no items)'`.
+- `'Sua loja: '` (owner-view banner) → `'Your shop: '`.
+- Cell tooltip `'cada'` → `'each'`.
+- `qtyLbl text: Quantidade:` → `Quantity:`.
+
+### Buyer balance fix
+
+`PlayerShop_SendShopDataTo` was using a manual `countItemInBP` walk that only scanned `CONST_SLOT_BACKPACK`. Coins held in the player's hand / ammo / non-BP slots were ignored from the displayed balance, while `PlayerShop_DoBuy` correctly used `Player:getMoney()` (which scans every slot + nested containers + converts plat/crystal to gp). Result: display showed less than the player could spend. Replaced the manual walk with `buyer:getMoney()` so display and charge agree.
+
+### Bug fixes (rune-related)
+
+Three native-engine bugs surfaced this day and were fixed at the root:
+
+**1. `Item:setCount` is not bound** — `02_core.lua` line ~237 in the depot-strip code did `it:setCount(c - left)` to keep the unsold remainder when a partial-stack was listed (e.g. seller has 5 GFB runes, lists 4 → keep 1). `Item:setCount()` is NOT registered in this TFS 1.5 build (only `getCount`, `transform`, `remove`, `split`). The Lua error aborted `PlayerShop_Open` mid-flight and left the depot half-stripped. Fix: replaced with `it:remove(pulled)` — `internalRemoveItem(item, count)` is the canonical path, modifies the stack in place to (count - pulled) when partial, deletes when full.
+
+**2. Sales-history seller key was a runtime creature ID** — `LogSale` and `SendHistoryPage` were using `Player:getId()` (runtime creature id, reassigned every login) instead of `Player:getGuid()` (persistent DB pk = `players.id`). Result: a sale logged in session N would never appear when the seller relogged for N+1 because the WHERE clause looked for the new creature id. Both call sites switched to `getGuid()`.
+
+**3. Shop-cancel crash on partial-rune lists — ROOT CAUSE FIX** — when a player listed 4 of a 5-stack of runes and clicked Cancel Shop, the server CRASHED natively (real segfault, not Lua error). Diagnosis took a debug-print pass through every step of `PlayerShop_Close` to narrow it to `chest:addItem(2302, 4)`.
+
+   The crash was deep in `Game::internalAddItem` (`game.cpp:1320-1352`) — the merge code path for stackable items. `Item::getStackMax()` (`item.h:960`) for runes returns the items.xml `charges` value, which was inconsistent with what `spells.xml` actually conjures:
+
+   | Rune id | items.xml had | spells.xml conjures | Stack actually seen |
+   |---|---|---|---|
+   | 2292 envenom | charges=1 | charges=5 | up to 5 |
+   | 2302 fireball | 2 | 5 | up to 5 |
+   | 2304 great fireball | 2 | 4 | up to 4 |
+   | 2308 soulfire | 3 | 5 | up to 5 |
+   | 2311 heavy magic missile | 5 | 10 | up to 10 |
+   | 2313 explosion | 3 | 6 | up to 6 |
+
+   Player has a 5-stack but engine thinks max=2 → on merge, `n = min(stackMax(2) - existing(1), addQty(4)) = 1`, leftover `count = 4-1 = 3`. The code recurses to add the 3-stack to a chest where the only existing fire-bomb stack is now at the (engine-believed) max. Internal pointer math during the recursive add ends up dereferencing an Item that was already `ReleaseItem`-ed. Segfault.
+
+   **Two attempted fixes**, settled on the second:
+
+   - First attempt (commit `82286959`'s neighbor, never landed): a Lua-side workaround that walked the chest manually with `Item:transform` to top up existing stacks before falling back to `addItem`. Worked but added 50+ lines and a parallel implementation of merge logic. Abandoned in favor of the root fix.
+   - Final fix (commit `2f0ff9d3`): synced `data/items/items.xml` charges values to match `spells.xml`. Now `getStackMax()` returns the real max — `n = min(stackMax(5) - 1, 4) = 4`, `count = 0`, fully-merged path runs cleanly without recursion. Native engine merge works correctly without any Lua workaround. Six rune ids touched (see table above).
+
+   **Lesson**: in this codebase, `data/items/items.xml charges` is the SINGLE SOURCE OF TRUTH for both rune charges-per-cast AND stack max. When introducing or changing rune behavior in `spells.xml`, mirror the value in `items.xml` or the engine's stack/merge math will bug out silently for partial-stack operations.
+
+### Test data inserted
+
+For paginated history demo, 30 then 40 records inserted into `playershop_history` for `MS Lemos` (guid=5):
+- Mix of 11 distinct buyer names
+- 13 distinct rune/coin/equipment ids
+- Counts 1..1000x (exercises the `Nx item` formatter)
+- Prices 5g .. 480.000g (exercises thousand-separator)
+- Timestamps spanning seconds-ago to ~58 days ago (exercises `ts DESC` ordering)
+
+40 entries / 20 per page = 2 pages — `|<` `<` disabled on page 1, `>` `>|` disabled on page 2, footer alternates between `1/2` and `2/2`.
+
+### Files touched
+
+**Server (`Realera TFS 1.5`):**
+- `data/scripts/playershop/07_history.lua` — NEW. Schema + LogSale + FetchHistory + SendHistoryPage.
+- `data/scripts/playershop/01_config.lua` — added `HISTORY_REQUEST = 139` / `HISTORY = 140` to PlayerShopOpcode table.
+- `data/scripts/playershop/02_core.lua` — wired `PlayerShop_LogSale` into DoBuy; switched to `getGuid()`; replaced broken `Item:setCount` with `Item:remove(pulled)`; replaced manual `countItemInBP` walk with `Player:getMoney()`.
+- `data/scripts/playershop/03_opcodes.lua` — dispatch `HISTORY_REQUEST` to `SendHistoryPage`.
+- `data/items/items.xml` — six rune charges values synced to spells.xml.
+
+**Client (`otcv8-dev`):**
+- `modules/game_playershop/playershop.otui` — bottom-row layout rework, `historyPanel` + `HistoryRow` styles, scrollbar margins, X clear button alignment, qtyLbl translation, hover removal on history rows.
+- `modules/game_playershop/create_shop.lua` — history mode toggle + pagination + render entries.
+- `modules/game_playershop/playershop.lua` — opcode constants 139/140 + `onShopHistory` parser + register/unregister.
+- `modules/game_playershop/shop_view.lua` — empty-search hint, owner-view banner, cell tooltip translations.
+- `modules/game_interface/gameinterface.lua` — too-far message switched to `displayStatusMessage` (EN, white).
