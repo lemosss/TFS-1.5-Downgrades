@@ -1776,3 +1776,109 @@ So the seller may type / click / right-click / attack / turn / etc. all they wan
 - **Shop Idle** — bigger feature. Three architectures discussed (NPC ghost / player offline-active / persistence-only). User to pick before implementation.
 - **Seller view (`CreateShopWindow`) redesign** — second screenshot reference. Description-focused with Idle Shop / Edit Description / History buttons, slider-based price entry. Old slot-list still in place.
 - **History** — per-shop sales log; needs new persistence (storage table or new SQL table).
+
+---
+
+## 17. Day-10 — Seller-view grid rewrite + qty-modal + draft restore + info-panel polish
+
+All edits client-side this day (`otcv8-dev/modules/game_playershop/`). Server (TFS) untouched. Branch: `master` on `lemosss/otcv8-dev`.
+
+### Seller view (`CreateShopWindow`) — grid rewrite
+
+The old vertical-list seller layout was replaced with a grid of `ShopSellerCell`s mirroring the buyer view (same 36×36 cells, same info panel below, same description box on the right).
+
+- **Dynamic `+` cell**: `ensureTrailingPlus()` keeps exactly **one** trailing empty cell at the end of the grid. Filling it auto-spawns a new `+` after it (until `MAX_SLOTS = 20`). Removing a slot destroys the widget entirely (no empty placeholders) and `ensureTrailingPlus()` re-adds a `+` if needed.
+- `slots[]` is now indexed `{ entryUid, entryId, serverId, count, charges, price, name, stackable, widget }`. `selectedSlotIndex` is module-scoped.
+- Click handler: empty cell → opens picker. Filled cell → `selectSlot(index)` (highlights + populates info panel).
+- Info panel: `slotName`, `slotPriceLbl` + `slotPriceEdit` (live-editable), `slotAmountLbl`, `slotRemoveBtn`, `previewSlot`/`previewItem`, `descPanel`/`descText`. Price changes update `slots[index].price` instantly (validated 1..1e9; out-of-range turns the edit red).
+- `commitCreateShop()`: walks filled slots in order, packs `entryUid:u32`, `serverId:u16`, `count:u16`, `price:u32` per item.
+
+### Modal qty dialog
+
+The "How many?" prompt for stackable items used to drift behind the create / picker windows when the user clicked outside it. Fixed via a transparent overlay that sits BETWEEN qtyWindow and everything else:
+
+```lua
+local overlay = g_ui.createWidget('UIWidget', rootWidget)
+overlay:fill('parent')
+overlay:setBackgroundColor('#00000000')
+overlay:setFocusable(false)
+overlay.onMousePress = function() return true end  -- swallow all clicks
+qtyWindow:raise()
+qtyWindow:focus()
+```
+
+After `qtyWindow:raise()` the z-order is `[..., createWindow, overlay, qtyWindow]`. Clicks inside qtyWindow's bounds reach its children (OK/Cancel/edit). Clicks outside hit the overlay and are eaten by the `return true`. Belt+suspenders: a `closeQty()` helper unified by a `destroyed` guard handles OK / Cancel / Enter / Escape, and tears down both overlay and qtyWindow together.
+
+### Pre-load rejected draft (and clear on success)
+
+When the server rejects the OPEN payload (e.g. "Invalid price item slot 1"), the client used to drop everything and the seller had to re-pick all items from scratch. Now:
+
+1. `commitCreateShop()` already cached `lastSavedSlots = { [idx] = { uid, id, serverId, count, charges, price } }` before closing the window.
+2. `openCreateShop()` now sets `pendingRestoreDraft = lastSavedSlots ~= nil and next(lastSavedSlots) ~= nil`.
+3. `create_shop_inventory()` (the inventory-list response handler) calls `restoreDraftSlots()` BEFORE `populatePickerList()` so the picker filters consider the items already consumed by restored slots.
+4. `restoreDraftSlots()` matches saved entries against the fresh inventory:
+   - Non-stackable: by `uid` (each depot instance unique).
+   - Stackable: by `serverId`, count clamped to `min(saved.count, available)`.
+   - Items that no longer exist (sold / moved) are silently skipped — no phantom slots.
+5. After re-fill, `s.price = saved.price` is written back so the user doesn't re-type prices.
+
+**Cache lifecycle** — the cache must NOT persist past a successful open or the user gets a confusing "ghost previous shop" on every Open Shop click. Cleared in two places:
+- `playershop.lua` `onStateBroadcast` when `cid == lp:getId() and isOpen == 1` (server confirmed the shop is up): `lastSavedText = nil; lastSavedSlots = nil`.
+- `onGameEnd` (Ctrl+Q / character switch) — already clears it.
+
+REJECT does NOT clear (server sends `isOpen=0` after a REJECT, but the cache-clear is gated on `isOpen == 1`).
+
+| Situation | `lastSavedSlots` | Next Open Shop |
+|---|---|---|
+| Reject | kept | grid auto-restored |
+| Open succeeded → user closes shop later | cleared at open | empty grid |
+| Logout / Ctrl+Q | cleared in `onGameEnd` | empty grid |
+
+### Info-panel spacing — Create Shop AND Buyer view
+
+Both `infoPanel`s (`CreateShopWindow` and `ShopViewWindow`) had the price label hugging the item name because the price field is a `TextEdit` (taller than a Label) anchored to `priceLbl.verticalCenter`, so its top edge rose above the label and visually touched the line above. Fix:
+
+| | Create Shop | Buyer |
+|---|---|---|
+| `priceLbl margin-top` | 4 → **14** | 4 → **14** |
+| Amount label anchor | `slotPriceLbl.bottom` → **`slotPriceEdit.bottom`** | (already on `amountScroll.bottom`) |
+| Amount margin-top | 6 → **8** | 4 → **8** |
+| Below-amount margin-top | 6 → **8** (Remove btn) | (n/a) |
+
+Now both panels look identical: name → 14px → price line → 8px → amount → 8px → button(s).
+
+### `+` glyph in empty seller cells
+
+The original `Label { text: + ; font: terminus-14px-bold }` rendered fine but felt cheap. Tried bumping to `sans-bold-16px` — broke (rendering glitch / clipped baseline). Final solution: **draw the `+` as two crossing UIWidget rectangles**, font-independent and pixel-perfect:
+
+```otui
+UIWidget
+  id: cellPlus
+  anchors.centerIn: parent
+  size: 16 16
+  phantom: true
+
+  UIWidget   -- horizontal bar
+    anchors.centerIn: parent
+    size: 14 2
+    background-color: #b8b8b8
+    phantom: true
+
+  UIWidget   -- vertical bar
+    anchors.centerIn: parent
+    size: 2 14
+    background-color: #b8b8b8
+    phantom: true
+```
+
+The wrapper keeps the `cellPlus` id so `cell.cellPlus:setVisible(true/false)` (called by `setCellEmpty`/`setCellFilled`) works unchanged — hiding the wrapper hides both bars. `phantom: true` everywhere lets hover events bubble up to the parent cell, which now has `$hover: background-color: #ffffff14` for a subtle clickable feedback.
+
+**OTUI gotcha (re)hit during this work**: `--` is NOT a valid comment in OTUI. Adding `-- description` lines inside a style block makes the parser treat them as broken declarations. Stick to no inline comments, or describe styles in CLAUDE.md / Lua-side instead.
+
+### Files touched (otcv8-dev)
+
+- `modules/game_playershop/playershop.otui` — ShopSellerCell rewrite (+ hover + 2-rect `+`), CreateShopWindow grid layout, info-panel spacing on both windows.
+- `modules/game_playershop/create_shop.lua` — full rewrite for grid + dynamic `+` + draft restore + modal qty.
+- `modules/game_playershop/playershop.lua` — `onStateBroadcast` clears draft cache on confirmed open; minor tidy.
+
+No server-side changes today.
