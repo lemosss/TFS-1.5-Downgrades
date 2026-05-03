@@ -23,4 +23,9 @@ keywordHandler:addKeyword({'rumo'}, StdModule.say, {npcHandler = npcHandler, onl
 keywordHandler:addKeyword({'spellbook'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Please ask the stationer in the west tower for that."})
 keywordHandler:addKeyword({'spell'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I have 'Ultimate Light', 'Soul Fire', 'Magic Wall', 'Cancel Invisibility', and 'Undead Legion'. Are you interested?"})
 
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach druid {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())

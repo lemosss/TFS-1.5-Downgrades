@@ -52,13 +52,9 @@ shopModule:addBuyableItem({'spear'}, 					Cfspear, 9)
 
 
 -- migrated from XML shop_buyable/shop_sellable
-shopModule:addBuyableItem({'earth arrow'}, 7850, 5, 1, 'earth arrow')
-shopModule:addBuyableItem({'flaming arrow'}, 7840, 5, 1, 'flaming arrow')
-shopModule:addBuyableItem({'flash arrow'}, 7838, 5, 1, 'flash arrow')
 shopModule:addBuyableItem({'onyx arrow'}, 7365, 7, 1, 'onyx arrow')
 shopModule:addBuyableItem({'piercing bolt'}, 7363, 5, 1, 'piercing bolt')
 shopModule:addBuyableItem({'royal spear'}, 7378, 15, 1, 'royal spear')
-shopModule:addBuyableItem({'shiver arrow'}, 7839, 5, 1, 'shiver arrow')
 shopModule:addBuyableItem({'sniper arrow'}, 7364, 5, 1, 'sniper arrow')
 shopModule:addBuyableItem({'throwing star'}, 2399, 42, 1, 'throwing star')
 

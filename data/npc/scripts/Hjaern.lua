@@ -69,16 +69,10 @@ local function creatureSayCallback(cid, type, msg)
 				player:setStorageValue(Storage.TheIceIslands.Questline, 40)
 				player:setStorageValue(Storage.TheIceIslands.yakchalDoor, 1)
 				player:setStorageValue(Storage.TheIceIslands.Mission12, 6) -- Questlog The Ice Islands Quest, Formorgar Mines 4: Retaliation
-				player:setStorageValue(Storage.OutfitQuest.NorsemanAddon, 1) -- Questlog Norseman Outfit Quest
-				player:setStorageValue(Storage.OutfitQuest.DefaultStart, 1) --this for default start of Outfit and Addon Quests
-				player:addOutfit(251, 0)
-				player:addOutfit(252, 0)
 				player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
 				npcHandler:say({
 					"Yes, I can feel it! The spirits are in touch with the obelisks. We will begin to channel a spell of ice on the caves. That will prevent the melting of the ice there ...",
-					"If you would like to help us, you can turn in frostheart shards from now on. We use them to fuel our spell with the power of ice. ...",
-					"Oh, and before I forget it - since you have done a lot to help us and spent such a long time in this everlasting winter, I have a special present for you. ...",
-					"Take this outfit to keep your warm during your travels in this frozen realm!"
+					"If you would like to help us, you can turn in frostheart shards from now on. We use them to fuel our spell with the power of ice."
 				}, cid)
 			end
 			npcHandler.topic[cid] = 0
@@ -96,24 +90,6 @@ local function creatureSayCallback(cid, type, msg)
 		elseif player:getStorageValue(Storage.TheIceIslands.Questline) == 44 then
 			npcHandler:say("Do you want to sell all your shards for 2000 gold coins per each? ", cid)
 			npcHandler.topic[cid] = 5
-		end
-	elseif msgcontains(msg, "reward") then
-		if player:getStorageValue(Storage.TheIceIslands.Questline) == 41 then
-			npcHandler:say("Take this. It might suit your Nordic outfit fine. ", cid)
-			player:addOutfitAddon(252, 1)
-			player:addOutfitAddon(251, 1)
-			player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
-			player:setStorageValue(Storage.TheIceIslands.Questline, 42)
-			player:setStorageValue(Storage.OutfitQuest.NorsemanAddon, 2) -- Questlog Norseman Outfit Quest
-			npcHandler.topic[cid] = 3
-		elseif player:getStorageValue(Storage.TheIceIslands.Questline) == 43 then
-			player:addOutfitAddon(252, 2)
-			player:addOutfitAddon(251, 2)
-			player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
-			npcHandler:say("Take this. It might suit your Nordic outfit fine. From now on we only can give you 2000 gold pieces for each shard. ", cid)
-			player:setStorageValue(Storage.TheIceIslands.Questline, 44)
-			player:setStorageValue(Storage.OutfitQuest.NorsemanAddon, 3) -- Questlog Norseman Outfit Quest
-			npcHandler.topic[cid] = 4
 		end
 	elseif msgcontains(msg, "tylaf") then
 		if player:getStorageValue(Storage.TheIceIslands.Questline) == 36 then
@@ -193,4 +169,9 @@ local function creatureSayCallback(cid, type, msg)
 end
 
 npcHandler:setCallback(CALLBACK_MESSAGE_DEFAULT, creatureSayCallback)
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach druid {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())

@@ -12,7 +12,7 @@
 		<parameter key="message_walkaway" value="How rude!" />
 		<parameter key="message_sendtrade" value="Of course." />
 		<parameter key="module_shop" value="1" />
-		<parameter key="shop_buyable" value="orichalcum pearl,5022,80" />
-		<parameter key="shop_sellable" value="first verse of the hymn,6087,100;second verse of the hymn,6088,250;third verse of the hymn,6089,400;fourth verse of the hymn,6090,800" />
+		<parameter key="shop_buyable" value="orichalcum pearl,5022,80;" />
+		<parameter key="shop_sellable" value="first verse of the hymn,6087,100;second verse of the hymn,6088,250;third verse of the hymn,6089,400;fourth verse of the hymn,6090,800;" />
 	</parameters>
 </npc>

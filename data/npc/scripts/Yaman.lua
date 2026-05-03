@@ -81,6 +81,10 @@ local function creatureSayCallback(cid, type, msg)
 end
 
 local function onTradeRequest(cid)
+	local _gmPlayer = Player(cid)
+	if _gmPlayer and _gmPlayer:getGroup() and _gmPlayer:getGroup():getAccess() then
+		return true
+	end
 	local player = Player(cid)
 	
 	if player:getStorageValue(Storage.DjinnWar.EfreetFaction.Mission03) ~= 3 then

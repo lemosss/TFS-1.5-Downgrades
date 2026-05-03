@@ -10,10 +10,10 @@ function onThink() npcHandler:onThink() end
 local function greetCallback(cid)
 	local player = Player(cid)
 	if player:isSorcerer() then
-		npcHandler:setMessage(MESSAGE_GREET, "Hiho <cough> and welcome back, ".. player:getName() .."!")
+		npcHandler:setMessage(MESSAGE_GREET, "Hiho <cough> and welcome back, ".. player:getName() ..". I teach sorcerer {spells}. What would you like to learn?")
 	else
-		npcHandler:setMessage(MESSAGE_GREET, "Hiho, ".. player:getName() .." <cough>")
-	end	
+		npcHandler:setMessage(MESSAGE_GREET, "Hiho, ".. player:getName() .." <cough>. I teach sorcerer {spells}. What would you like to learn?")
+	end
 	return true
 end
 
@@ -33,4 +33,7 @@ keywordHandler:addKeyword({'rod'}, StdModule.say, {npcHandler = npcHandler, only
 keywordHandler:addKeyword({'vial'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Sorry, I don't buy these anymore. <cough> I'm old and have to focus on more important things. Please ask my brother Sigurd next door. <cough>"})
 
 npcHandler:setCallback(CALLBACK_GREET, greetCallback)
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 1, Spellbook.sorcerer)
+
 npcHandler:addModule(FocusModule:new())

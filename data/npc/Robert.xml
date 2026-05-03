@@ -28,9 +28,6 @@
 			dagger,2379,5;
 			doublet,2485,16;
 			dwarven shield,2525,500;
-			earth arrow,7850,5;
-			flaming arrow,7840,5;
-			flash arrow,7838,5;
 			hand axe,2380,8;
 			iron helmet,2459,390;
 			jacket,2650,12;
@@ -49,7 +46,6 @@
 			rapier,2384,15;
 			sabre,2385,35;
 			scale armor,2483,260;
-			shiver arrow,7839,5;
 			short sword,2406,26;
 			sickle,2405,7;
 			sniper arrow,7364,5;
@@ -69,7 +65,7 @@
 			viking helmet,2473,265;
 			viking shield,2531,260;
 			war hammer,2391,10000;
-			wooden shield,2512,15" />
+			wooden shield,2512,15;" />
 		<parameter key="shop_sellable" value="
 	axe,2386,7;
 	battle axe,2378,80;
@@ -136,6 +132,6 @@
 	viking helmet,2473,66;
 	viking shield,2531,85;
 	war hammer,2391,470;
-	wooden shield,2512,5" />
+	wooden shield,2512,5;" />
 	</parameters>
 </npc>

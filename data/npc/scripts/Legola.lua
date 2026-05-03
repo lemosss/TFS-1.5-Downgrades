@@ -21,4 +21,9 @@ keywordHandler:addKeyword({'woman'}, StdModule.say, {npcHandler = npcHandler, on
 keywordHandler:addKeyword({'spellbook'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "In a spellbook, your spells are listed. There you will find the pronunciation of each spell. If you want to buy one, visit the magicians' shop in the south of Carlin."})
 keywordHandler:addKeyword({'ghostlands'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Many tried to break that curse, but the evil there is so deep and overwhelmig there seems to be no hope."})
 
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 3, Spellbook.paladin)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach paladin {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())

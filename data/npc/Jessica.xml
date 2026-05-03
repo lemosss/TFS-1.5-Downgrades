@@ -6,8 +6,6 @@
 		<parameter key="module_shop" value="1" />
 		<parameter key="shop_sellable" value="
 			black pearl,2144,280;
-			green giant shimmering pearl,7632,3000;
-			brown giant shimmering pearl,7633,3000;
 			golden figurine,5799,3000;
 			small amethyst,2150,200;
 			small diamond,2145,300;

@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <spells>
-	<instant group="attack" name="Berserk" words="exori" lvl="35" mana="120" prem="1" needweapon="1" exhaustion="2000" needlearn="0" script="attack/berserk.lua" maglv="5">
+	<instant group="attack" name="Berserk" words="exori" lvl="35" mana="120" prem="1" needweapon="1" exhaustion="2000" needlearn="1" script="attack/berserk.lua" maglv="5">
 		<vocation name="Knight"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="support" name="Cancel Invisibility" words="exana ina" lvl="26" mana="200" prem="1" aggressive="0" selftarget="1" exhaustion="2000" needlearn="0" script="support/cancel invisibility.lua" maglv="12">
+	<instant group="support" name="Cancel Invisibility" words="exana ina" lvl="26" mana="200" prem="1" aggressive="0" selftarget="1" exhaustion="2000" needlearn="1" script="support/cancel invisibility.lua" maglv="12">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Challenge" words="exeta res" lvl="20" mana="60" prem="1" aggressive="0" exhaustion="2000" needlearn="0" script="support/challenge.lua" maglv="4">
+	<instant group="support" name="Challenge" words="exeta res" lvl="20" mana="60" prem="1" aggressive="0" exhaustion="2000" needlearn="1" script="support/challenge.lua" maglv="4">
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="support" name="Creature Illusion" words="utevo res ina" lvl="23" mana="100" aggressive="0" params="1" exhaustion="2000" needlearn="0" function="Illusion" maglv="10" prem="0">
+	<instant group="support" name="Creature Illusion" words="utevo res ina" lvl="23" mana="100" aggressive="0" params="1" exhaustion="2000" needlearn="1" function="Illusion" maglv="10" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="healing" name="Cure Poison" words="exana pox" lvl="10" mana="30" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="healing/cure poison.lua" maglv="2" prem="0">
+	<instant group="healing" name="Cure Poison" words="exana pox" lvl="10" mana="30" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="healing/cure poison.lua" maglv="2" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -27,31 +27,31 @@
 		<vocation name="Royal Paladin"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="attack" name="Energy Beam" words="exevo vis lux" lvl="23" mana="100" direction="1" exhaustion="2000" needlearn="0" script="attack/energy beam.lua" maglv="10" prem="0">
+	<instant group="attack" name="Energy Beam" words="exevo vis lux" lvl="23" mana="100" direction="1" exhaustion="2000" needlearn="1" script="attack/energy beam.lua" maglv="10" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="attack" name="Energy Strike" words="exori vis" lvl="12" mana="20" prem="1" range="3" casterTargetOrDirection="1" blockwalls="1" exhaustion="2000" needlearn="0" script="attack/energy strike.lua" maglv="3">
+	<instant group="attack" name="Energy Strike" words="exori vis" lvl="12" mana="20" prem="1" range="3" casterTargetOrDirection="1" blockwalls="1" exhaustion="2000" needlearn="1" script="attack/energy strike.lua" maglv="3">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="attack" name="Energy Wave" words="exevo mort hur" lvl="38" mana="250" direction="1" exhaustion="2000" needlearn="0" script="attack/energy wave.lua" maglv="20" prem="1">
+	<instant group="attack" name="Energy Wave" words="exevo mort hur" lvl="38" mana="250" direction="1" exhaustion="2000" needlearn="1" script="attack/energy wave.lua" maglv="20" prem="1">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="attack" name="Ethereal Spear" words="exori con" lvl="23" mana="35" prem="1" range="7" needtarget="1" exhaustion="2000" blockwalls="1" needlearn="0" script="attack/ethereal spear.lua">
+	<!-- <instant group="attack" name="Ethereal Spear" words="exori con" lvl="23" mana="35" prem="1" range="7" needtarget="1" exhaustion="2000" blockwalls="1" needlearn="1" script="attack/ethereal spear.lua">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant> -->
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="attack" name="Fierce Berserk" words="exori gran" lvl="70" mana="340" prem="1" needweapon="1" exhaustion="1000" needlearn="0" script="attack/fierce berserk.lua">
+	<!-- <instant group="attack" name="Fierce Berserk" words="exori gran" lvl="70" mana="340" prem="1" needweapon="1" exhaustion="1000" needlearn="1" script="attack/fierce berserk.lua">
 		<vocation name="Knight"/>
 		<vocation name="Elite Knight"/>
 	</instant> -->
-	<instant group="support" name="Find Person" words="exiva" lvl="8" mana="20" aggressive="0" playernameparam="1" params="1" exhaustion="2000" needlearn="0" function="searchPlayer" maglv="0" prem="0">
+	<instant group="support" name="Find Person" words="exiva" lvl="8" mana="20" aggressive="0" playernameparam="1" params="1" exhaustion="2000" needlearn="1" function="searchPlayer" maglv="0" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -61,31 +61,31 @@
 		<vocation name="Royal Paladin"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="attack" name="Fire Wave" words="exevo flam hur" lvl="18" mana="80" direction="1" exhaustion="2000" needlearn="0" script="attack/fire wave.lua" maglv="7" prem="0">
+	<instant group="attack" name="Fire Wave" words="exevo flam hur" lvl="18" mana="80" direction="1" exhaustion="2000" needlearn="1" script="attack/fire wave.lua" maglv="7" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="attack" name="Flame Strike" words="exori flam" lvl="12" mana="20" prem="1" range="3" casterTargetOrDirection="1" blockwalls="1" exhaustion="2000" needlearn="0" script="attack/flame strike.lua" maglv="3">
-		<vocation name="Sorcerer"/>
-		<vocation name="Druid"/>
-		<vocation name="Master Sorcerer"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Food" words="exevo pan" lvl="14" mana="30" exhaustion="2000" aggressive="0" needlearn="0" script="support/food.lua" maglv="0" prem="0">
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="attack" name="Force Strike" words="exori mort" lvl="11" mana="20" prem="1" range="3" casterTargetOrDirection="1" blockwalls="1" exhaustion="2000" needlearn="0" script="attack/force strike.lua" maglv="2">
+	<instant group="attack" name="Flame Strike" words="exori flam" lvl="12" mana="20" prem="1" range="3" casterTargetOrDirection="1" blockwalls="1" exhaustion="2000" needlearn="1" script="attack/flame strike.lua" maglv="3">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="attack" name="Great Energy Beam" words="exevo gran vis lux" lvl="29" mana="200" direction="1" exhaustion="2000" needlearn="0" script="attack/great energy beam.lua" maglv="14" prem="0">
+	<instant group="support" name="Food" words="exevo pan" lvl="14" mana="30" exhaustion="2000" aggressive="0" needlearn="1" script="support/food.lua" maglv="0" prem="0">
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="attack" name="Force Strike" words="exori mort" lvl="11" mana="20" prem="1" range="3" casterTargetOrDirection="1" blockwalls="1" exhaustion="2000" needlearn="1" script="attack/force strike.lua" maglv="2">
+		<vocation name="Sorcerer"/>
+		<vocation name="Druid"/>
+		<vocation name="Master Sorcerer"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="attack" name="Great Energy Beam" words="exevo gran vis lux" lvl="29" mana="200" direction="1" exhaustion="2000" needlearn="1" script="attack/great energy beam.lua" maglv="14" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="support" name="Great Light" words="utevo gran lux" lvl="13" mana="60" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="support/great light.lua" maglv="3" prem="0">
+	<instant group="support" name="Great Light" words="utevo gran lux" lvl="13" mana="60" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="support/great light.lua" maglv="3" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -96,11 +96,11 @@
 		<vocation name="Elite Knight"/>
 	</instant>
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="attack" name="Groundshaker" words="exori mas" lvl="33" mana="160" prem="1" needweapon="1" exhaustion="1000" needlearn="0" script="attack/groundshaker.lua">
+	<!-- <instant group="attack" name="Groundshaker" words="exori mas" lvl="33" mana="160" prem="1" needweapon="1" exhaustion="1000" needlearn="1" script="attack/groundshaker.lua">
 		<vocation name="Knight"/>
 		<vocation name="Elite Knight"/>
 	</instant> -->
-	<instant group="support" name="Haste" words="utani hur" lvl="14" mana="60" prem="1" aggressive="0" selftarget="1" exhaustion="2000" needlearn="0" script="support/haste.lua" maglv="4">
+	<instant group="support" name="Haste" words="utani hur" lvl="14" mana="60" prem="1" aggressive="0" selftarget="1" exhaustion="2000" needlearn="1" script="support/haste.lua" maglv="4">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -110,11 +110,11 @@
 		<vocation name="Royal Paladin"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="healing" name="Heal Friend" words="exura sio" lvl="18" mana="70" prem="1" aggressive="0" blockwalls="1" needtarget="1" playernameparam="1" params="1" exhaustion="1000" needlearn="0" script="healing/heal friend.lua" maglv="7">
+	<instant group="healing" name="Heal Friend" words="exura sio" lvl="18" mana="70" prem="1" aggressive="0" blockwalls="1" needtarget="1" playernameparam="1" params="1" exhaustion="1000" needlearn="1" script="healing/heal friend.lua" maglv="7">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="healing" name="Intense Healing" words="exura gran" lvl="11" mana="40" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="healing/intense healing.lua" maglv="2" prem="0">
+	<instant group="healing" name="Intense Healing" words="exura gran" lvl="11" mana="40" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="healing/intense healing.lua" maglv="2" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -122,23 +122,13 @@
 		<vocation name="Elder Druid"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Invisibility" words="utana vid" lvl="35" mana="210" aggressive="0" selftarget="1" exhaustion="2000" needlearn="0" script="support/invisible.lua" maglv="15" prem="0">
+	<instant group="support" name="Invisibility" words="utana vid" lvl="35" mana="210" aggressive="0" selftarget="1" exhaustion="2000" needlearn="1" script="support/invisible.lua" maglv="15" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Levitate" words="exani hur" lvl="12" mana="50" prem="1" aggressive="0" exhaustion="1000" params="1" needlearn="0" function="Levitate" maglv="3">
-		<vocation name="Sorcerer"/>
-		<vocation name="Druid"/>
-		<vocation name="Paladin"/>
-		<vocation name="Knight"/>
-		<vocation name="Master Sorcerer"/>
-		<vocation name="Elder Druid"/>
-		<vocation name="Royal Paladin"/>
-		<vocation name="Elite Knight"/>
-	</instant>
-	<instant group="support" name="Light" words="utevo lux" lvl="8" mana="20" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="support/light.lua" maglv="0" prem="0">
+	<instant group="support" name="Levitate" words="exani hur" lvl="12" mana="50" prem="1" aggressive="0" exhaustion="1000" params="1" needlearn="1" function="Levitate" maglv="3">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -148,7 +138,7 @@
 		<vocation name="Royal Paladin"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="healing" name="Light Healing" words="exura" lvl="9" mana="25" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="healing/light healing.lua" maglv="1" prem="0">
+	<instant group="support" name="Light" words="utevo lux" lvl="8" mana="20" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="support/light.lua" maglv="0" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -158,7 +148,7 @@
 		<vocation name="Royal Paladin"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="support" name="Magic Rope" words="exani tera" lvl="9" mana="20" prem="1" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="support/magic rope.lua" maglv="1">
+	<instant group="healing" name="Light Healing" words="exura" lvl="9" mana="25" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="healing/light healing.lua" maglv="1" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -168,50 +158,60 @@
 		<vocation name="Royal Paladin"/>
 		<vocation name="Elite Knight"/>
 	</instant>
-	<instant group="support" name="Magic Shield" words="utamo vita" lvl="14" mana="50" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="support/magic shield.lua" maglv="4" prem="0">
+	<instant group="support" name="Magic Rope" words="exani tera" lvl="9" mana="20" prem="1" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="support/magic rope.lua" maglv="1">
+		<vocation name="Sorcerer"/>
+		<vocation name="Druid"/>
+		<vocation name="Paladin"/>
+		<vocation name="Knight"/>
+		<vocation name="Master Sorcerer"/>
+		<vocation name="Elder Druid"/>
+		<vocation name="Royal Paladin"/>
+		<vocation name="Elite Knight"/>
+	</instant>
+	<instant group="support" name="Magic Shield" words="utamo vita" lvl="14" mana="50" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="support/magic shield.lua" maglv="4" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="healing" name="Mass Healing" words="exura gran mas res" lvl="36" mana="150" prem="1" aggressive="0" exhaustion="2000" needlearn="0" script="healing/mass healing.lua" maglv="19">
+	<instant group="healing" name="Mass Healing" words="exura gran mas res" lvl="36" mana="150" prem="1" aggressive="0" exhaustion="2000" needlearn="1" script="healing/mass healing.lua" maglv="19">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="attack" name="Poison Storm" words="exevo gran mas pox" lvl="50" mana="600" prem="1" selftarget="1" exhaustion="2000" needlearn="0" script="attack/poison storm.lua" maglv="28">
+	<instant group="attack" name="Poison Storm" words="exevo gran mas pox" lvl="50" mana="600" prem="1" selftarget="1" exhaustion="2000" needlearn="1" script="attack/poison storm.lua" maglv="28">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Strong Haste" words="utani gran hur" lvl="20" mana="100" prem="1" aggressive="0" selftarget="1" exhaustion="2000" needlearn="0" script="support/strong haste.lua" maglv="8">
+	<instant group="support" name="Strong Haste" words="utani gran hur" lvl="20" mana="100" prem="1" aggressive="0" selftarget="1" exhaustion="2000" needlearn="1" script="support/strong haste.lua" maglv="8">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Summon Creature" words="utevo res" lvl="25" params="1" exhaustion="2000" needlearn="0" function="summonMonster" maglv="16" prem="0">
+	<instant group="support" name="Summon Creature" words="utevo res" lvl="25" params="1" exhaustion="2000" needlearn="1" function="summonMonster" maglv="16" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="attack" name="Ultimate Explosion" words="exevo gran mas vis" lvl="60" mana="800" prem="1" exhaustion="2000" selftarget="1" needlearn="0" script="attack/ultimate explosion.lua" maglv="40">
+	<instant group="attack" name="Ultimate Explosion" words="exevo gran mas vis" lvl="60" mana="800" prem="1" exhaustion="2000" selftarget="1" needlearn="1" script="attack/ultimate explosion.lua" maglv="40">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="healing" name="Ultimate Healing" words="exura vita" lvl="20" mana="80" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="healing/ultimate healing.lua" maglv="8" prem="0">
+	<instant group="healing" name="Ultimate Healing" words="exura vita" lvl="20" mana="80" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="healing/ultimate healing.lua" maglv="8" prem="0">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Ultimate Light" words="utevo vis lux" lvl="26" mana="140" prem="1" aggressive="0" selftarget="1" exhaustion="1000" needlearn="0" script="support/ultimate light.lua" maglv="12">
+	<instant group="support" name="Ultimate Light" words="utevo vis lux" lvl="26" mana="140" prem="1" aggressive="0" selftarget="1" exhaustion="1000" needlearn="1" script="support/ultimate light.lua" maglv="12">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="attack" name="Whirlwind Throw" words="exori hur" lvl="15" mana="40" prem="1" range="5" needtarget="1" blockwalls="1" needweapon="1" exhaustion="2000" needlearn="0" script="attack/whirlwind throw.lua">
+	<!-- <instant group="attack" name="Whirlwind Throw" words="exori hur" lvl="15" mana="40" prem="1" range="5" needtarget="1" blockwalls="1" needweapon="1" exhaustion="2000" needlearn="1" script="attack/whirlwind throw.lua">
 		<vocation name="Knight"/>
 		<vocation name="Elite Knight"/>
 	</instant> -->
@@ -260,7 +260,7 @@
 
 <!-- Conjure Spells -->
     <!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="support" name="Blank Rune" words="adori blank" lvl="1" mana="25" soul="0" prem="0" aggressive="0" needlearn="0" exhaustion="1000" script="conjuring/blank_rune.lua">
+	<!-- <instant group="support" name="Blank Rune" words="adori blank" lvl="1" mana="25" soul="0" prem="0" aggressive="0" needlearn="1" exhaustion="1000" script="conjuring/blank_rune.lua">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
@@ -268,169 +268,161 @@
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant> -->
-	<instant group="support" name="Conjure Arrow" words="exevo con" lvl="13" mana="40" soul="0" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_arrow.lua" maglv="2">
+	<instant group="support" name="Conjure Arrow" words="exevo con" lvl="13" mana="40" soul="0" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_arrow.lua" maglv="2">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Conjure Poisoned Arrow" words="exevo con pox" lvl="16" mana="70" soul="0" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_poisoned_arrow.lua" maglv="5">
+	<instant group="support" name="Conjure Poisoned Arrow" words="exevo con pox" lvl="16" mana="70" soul="0" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_poisoned_arrow.lua" maglv="5">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Conjure Bolt" words="exevo con mort" lvl="17" mana="70" soul="0" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_bolt.lua" maglv="6">
+	<instant group="support" name="Conjure Bolt" words="exevo con mort" lvl="17" mana="70" soul="0" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_bolt.lua" maglv="6">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Conjure Explosive Arrow" words="exevo con flam" lvl="25" mana="120" soul="0" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_explosive_arrow.lua" maglv="10">
+	<instant group="support" name="Conjure Explosive Arrow" words="exevo con flam" lvl="25" mana="120" soul="0" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_explosive_arrow.lua" maglv="10">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="support" name="Conjure Piercing Bolt" words="exevo con grav" lvl="33" mana="180" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_piercing_bolt.lua">
+	<!-- <instant group="support" name="Conjure Piercing Bolt" words="exevo con grav" lvl="33" mana="180" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_piercing_bolt.lua">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant> -->
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant group="support" name="Conjure Sniper Arrow" words="exevo con hur" lvl="24" mana="160" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_sniper_arrow.lua">
+	<!-- <instant group="support" name="Conjure Sniper Arrow" words="exevo con hur" lvl="24" mana="160" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_sniper_arrow.lua">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant> -->
-	<instant group="support" name="Enchant Spear" words="exeta con" lvl="45" mana="120" soul="3" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/enchant_spear.lua" maglv="12">
+	<instant group="support" name="Enchant Spear" words="exeta con" lvl="45" mana="120" soul="3" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/enchant_spear.lua" maglv="12">
 		<vocation name="Paladin"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Enchant Staff" words="exeta vis" lvl="41" mana="80" soul="0" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/enchant_staff.lua" maglv="22">
+	<instant group="support" name="Enchant Staff" words="exeta vis" lvl="41" mana="80" soul="0" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/enchant_staff.lua" maglv="22">
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="support" name="Conjure Power Bolt" words="exevo con vis" lvl="59" mana="200" soul="4" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/conjure_power_bolt.lua" maglv="14">
+	<instant group="support" name="Conjure Power Bolt" words="exevo con vis" lvl="59" mana="200" soul="4" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/conjure_power_bolt.lua" maglv="14">
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Poison Field" words="adevo grav pox" lvl="14" mana="50" soul="1" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/poison_field.lua" maglv="2">
+	<instant group="support" name="Poison Field" words="adevo grav pox" lvl="14" mana="50" soul="1" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/poison_field.lua" maglv="2">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Light Magic Missile" words="adori" lvl="15" mana="40" soul="1" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/light_magic_missile.lua" maglv="1">
+	<instant group="support" name="Light Magic Missile" words="adori" lvl="15" mana="40" soul="1" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/light_magic_missile.lua" maglv="1">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Fire Field" words="adevo grav flam" lvl="15" mana="60" soul="1" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/fire_field.lua" maglv="3">
+	<instant group="support" name="Fire Field" words="adevo grav flam" lvl="15" mana="60" soul="1" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/fire_field.lua" maglv="3">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Fireball" words="adori flam" lvl="27" mana="60" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/fireball.lua" maglv="5">
+	<instant group="support" name="Fireball" words="adori flam" lvl="27" mana="60" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/fireball.lua" maglv="5">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="support" name="Energy Field" words="adevo grav vis" lvl="18" mana="80" soul="2" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/energy_field.lua" maglv="5">
-		<vocation name="Sorcerer"/>
-		<vocation name="Druid"/>
-		<vocation name="Master Sorcerer"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Envenom" words="adevo res pox" lvl="21" mana="100" soul="2" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/envenom.lua" maglv="7">
-		<vocation name="Sorcerer"/>
-		<vocation name="Master Sorcerer"/>
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Great Fireball" words="adori gran flam" lvl="30" mana="120" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/great_fireball.lua" maglv="9">
-		<vocation name="Sorcerer"/>
-		<vocation name="Master Sorcerer"/>
-	</instant>
-	<instant group="support" name="Heavy Magic Missile" words="adori gran" lvl="25" mana="70" soul="2" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/heavy_magic_missile.lua" maglv="3">
-		<vocation name="Sorcerer"/>
-		<vocation name="Master Sorcerer"/>
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Poison Bomb" words="adevo mas pox" lvl="25" mana="130" soul="2" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/poison_bomb.lua" maglv="8">
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Firebomb" words="adevo mas flam" lvl="27" mana="150" soul="4" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/firebomb.lua" maglv="9">
+	<instant group="support" name="Energy Field" words="adevo grav vis" lvl="18" mana="80" soul="2" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/energy_field.lua" maglv="5">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Soulfire" words="adevo res flam" lvl="27" mana="150" soul="3" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/soulfire.lua" maglv="13">
+	<instant group="support" name="Envenom" words="adevo res pox" lvl="21" mana="100" soul="2" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/envenom.lua" maglv="7">
+		<vocation name="Sorcerer"/>
+		<vocation name="Master Sorcerer"/>
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Great Fireball" words="adori gran flam" lvl="30" mana="120" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/great_fireball.lua" maglv="9">
+		<vocation name="Sorcerer"/>
+		<vocation name="Master Sorcerer"/>
+	</instant>
+	<instant group="support" name="Heavy Magic Missile" words="adori gran" lvl="25" mana="70" soul="2" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/heavy_magic_missile.lua" maglv="3">
+		<vocation name="Sorcerer"/>
+		<vocation name="Master Sorcerer"/>
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Poison Bomb" words="adevo mas pox" lvl="25" mana="130" soul="2" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/poison_bomb.lua" maglv="8">
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Firebomb" words="adevo mas flam" lvl="27" mana="150" soul="4" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/firebomb.lua" maglv="9">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Poison Wall" words="adevo mas grav pox" lvl="29" mana="160" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/poison_wall.lua" maglv="11">
+	<instant group="support" name="Soulfire" words="adevo res flam" lvl="27" mana="150" soul="3" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/soulfire.lua" maglv="13">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Explosion" words="adevo mas hur" lvl="31" mana="180" soul="4" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/explosion.lua" maglv="12">
+	<instant group="support" name="Poison Wall" words="adevo mas grav pox" lvl="29" mana="160" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/poison_wall.lua" maglv="11">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Fire Wall" words="adevo mas grav flam" lvl="33" mana="200" soul="4" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/fire_wall.lua" maglv="13">
+	<instant group="support" name="Explosion" words="adevo mas hur" lvl="31" mana="180" soul="4" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/explosion.lua" maglv="12">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Energybomb" words="adevo mas vis" lvl="37" mana="220" soul="5" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/energybomb.lua" maglv="18">
-		<vocation name="Sorcerer"/>
-		<vocation name="Master Sorcerer"/>
-	</instant>
-	<instant group="support" name="Energy Wall" words="adevo mas grav vis" lvl="41" mana="250" soul="5" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/energy_wall.lua" maglv="18">
+	<instant group="support" name="Fire Wall" words="adevo mas grav flam" lvl="33" mana="200" soul="4" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/fire_wall.lua" maglv="13">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Sudden Death" words="adori vita vis" lvl="45" mana="220" soul="5" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/sudden_death.lua" maglv="25">
+	<instant group="support" name="Energybomb" words="adevo mas vis" lvl="37" mana="220" soul="5" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/energybomb.lua" maglv="18">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="support" name="Antidote Rune" words="adana pox" lvl="15" mana="50" soul="1" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/antidote_rune.lua" maglv="5">
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Intense Healing Rune" words="adura gran" lvl="15" mana="60" soul="2" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/intense_healing_rune.lua" maglv="4">
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Ultimate Healing Rune" words="adura vita" lvl="24" mana="100" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/ultimate_healing_rune.lua" maglv="11">
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Convince Creature" words="adeta sio" lvl="16" mana="100" soul="3" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/convince_creature.lua" maglv="10">
-		<vocation name="Druid"/>
-		<vocation name="Elder Druid"/>
-	</instant>
-	<instant group="support" name="Animate Dead" words="adana mort" lvl="27" mana="300" soul="5" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/animate_dead.lua" maglv="7">
+	<instant group="support" name="Energy Wall" words="adevo mas grav vis" lvl="41" mana="250" soul="5" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/energy_wall.lua" maglv="18">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Chameleon" words="adevo ina" lvl="27" mana="150" soul="2" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/chameleon.lua" maglv="11">
+	<instant group="support" name="Sudden Death" words="adori vita vis" lvl="45" mana="220" soul="5" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/sudden_death.lua" maglv="25">
+		<vocation name="Sorcerer"/>
+		<vocation name="Master Sorcerer"/>
+	</instant>
+	<instant group="support" name="Antidote Rune" words="adana pox" lvl="15" mana="50" soul="1" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/antidote_rune.lua" maglv="5">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Destroy Field" words="adito grav" lvl="17" mana="60" soul="2" prem="0" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/destroy_field.lua" maglv="6">
+	<instant group="support" name="Intense Healing Rune" words="adura gran" lvl="15" mana="60" soul="2" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/intense_healing_rune.lua" maglv="4">
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Ultimate Healing Rune" words="adura vita" lvl="24" mana="100" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/ultimate_healing_rune.lua" maglv="11">
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Convince Creature" words="adeta sio" lvl="16" mana="100" soul="3" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/convince_creature.lua" maglv="10">
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Animate Dead" words="adana mort" lvl="27" mana="300" soul="5" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/animate_dead.lua" maglv="7">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
-		<vocation name="Paladin"/>
 		<vocation name="Master Sorcerer"/>
 		<vocation name="Elder Druid"/>
-		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Disintegrate" words="adito tera" lvl="21" mana="100" soul="3" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/disintegrate.lua" maglv="8">
+	<instant group="support" name="Chameleon" words="adevo ina" lvl="27" mana="150" soul="2" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/chameleon.lua" maglv="11">
+		<vocation name="Druid"/>
+		<vocation name="Elder Druid"/>
+	</instant>
+	<instant group="support" name="Destroy Field" words="adito grav" lvl="17" mana="60" soul="2" prem="0" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/destroy_field.lua" maglv="6">
 		<vocation name="Sorcerer"/>
 		<vocation name="Druid"/>
 		<vocation name="Paladin"/>
@@ -438,28 +430,36 @@
 		<vocation name="Elder Druid"/>
 		<vocation name="Royal Paladin"/>
 	</instant>
-	<instant group="support" name="Magic Wall" words="adevo grav tera" lvl="32" mana="250" soul="5" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/magic_wall.lua" maglv="14">
+	<instant group="support" name="Disintegrate" words="adito tera" lvl="21" mana="100" soul="3" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/disintegrate.lua" maglv="8">
+		<vocation name="Sorcerer"/>
+		<vocation name="Druid"/>
+		<vocation name="Paladin"/>
+		<vocation name="Master Sorcerer"/>
+		<vocation name="Elder Druid"/>
+		<vocation name="Royal Paladin"/>
+	</instant>
+	<instant group="support" name="Magic Wall" words="adevo grav tera" lvl="32" mana="250" soul="5" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/magic_wall.lua" maglv="14">
 		<vocation name="Sorcerer"/>
 		<vocation name="Master Sorcerer"/>
 	</instant>
-	<instant group="support" name="Wild Growth" words="adevo grav vita" lvl="27" mana="220" soul="5" prem="1" aggressive="0" needlearn="0" exhaustion="1000" script="conjuring/wild_growth.lua" maglv="13">
+	<instant group="support" name="Wild Growth" words="adevo grav vita" lvl="27" mana="220" soul="5" prem="1" aggressive="0" needlearn="1" exhaustion="1000" script="conjuring/wild_growth.lua" maglv="13">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>
 	</instant>
-	<instant group="support" name="Paralyze" words="adana ani" lvl="54" mana="600" soul="3" prem="1" aggressive="0" needlearn="0" exhaustion="2000" script="conjuring/paralyze.lua" maglv="35">
+	<instant group="support" name="Paralyze" words="adana ani" lvl="54" mana="600" soul="3" prem="1" aggressive="0" needlearn="1" exhaustion="2000" script="conjuring/paralyze.lua" maglv="35">
 		<vocation name="Druid"/>
 		<vocation name="Elder Druid"/>
 	</instant>
 
 	<!-- House Spells -->
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant name="House Guest List" words="aleta sio" selftarget="1" aggressive="0" function="editHouseGuest"/> -->
+	<!-- <instant needlearn="1" name="House Guest List" words="aleta sio" selftarget="1" aggressive="0" function="editHouseGuest"/> -->
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant name="House Subowner List" words="aleta som" selftarget="1" aggressive="0" function="editHouseSubOwner"/> -->
+	<!-- <instant needlearn="1" name="House Subowner List" words="aleta som" selftarget="1" aggressive="0" function="editHouseSubOwner"/> -->
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant name="House Door List" words="aleta grav" selftarget="1" aggressive="0" function="editHouseDoor"/> -->
+	<!-- <instant needlearn="1" name="House Door List" words="aleta grav" selftarget="1" aggressive="0" function="editHouseDoor"/> -->
 	<!-- [DESATIVADO - Magia fora da whitelist oficial - 28/04/2026] -->
-	<!-- <instant name="House Kick" words="alana sio" params="1" aggressive="0" function="houseKick"/> -->
+	<!-- <instant needlearn="1" name="House Kick" words="alana sio" params="1" aggressive="0" function="houseKick"/> -->
 
 	<!-- Monster Spells -->
 	<instant name="djinn electrify"  words="###2"  aggressive="1" blockwalls="1" needtarget="1" needlearn="1" script="monster/djinn electrify.lua"/>

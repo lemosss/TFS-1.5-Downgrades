@@ -473,6 +473,10 @@ keywordHandler:addKeyword({'magic'}, StdModule.say, {npcHandler = npcHandler, te
 keywordHandler:addKeyword({'jungle'}, StdModule.say, {npcHandler = npcHandler, text = 'Jungle is dangerous. Jungle also provides us food. Take care when in jungle and safe you be.'})
 
 local function onTradeRequest(cid)
+	local _gmPlayer = Player(cid)
+	if _gmPlayer and _gmPlayer:getGroup() and _gmPlayer:getGroup():getAccess() then
+		return true
+	end
 	if Player(cid):getStorageValue(Storage.TheApeCity.Questline) < 18 then
 		return false
 	end

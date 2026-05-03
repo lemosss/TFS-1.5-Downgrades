@@ -8,6 +8,6 @@
     <parameter key="message_walkaway" value="Good bye, |PLAYERNAME|." />
     <parameter key="message_onsendtrade" value="I'm currently interested in these materials." />
     <parameter key="module_shop" value="1" />
-    <parameter key="shop_sellable" value="Ape Fur,5883,120;White Piece of Cloth,5909,100;Yellow Piece of Cloth,5914,150" />
+    <parameter key="shop_sellable" value="Ape Fur,5883,120;White Piece of Cloth,5909,100;Yellow Piece of Cloth,5914,150;" />
   </parameters>
 </npc>

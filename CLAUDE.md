@@ -2441,3 +2441,884 @@ Git remotes pushed:
 
 **Builds**: `tfs.exe` rebuilt three times this session — for the stack-
 cap patch, the inventory swap, and the premium overflow.
+
+---
+
+## Day-14 — NPC trade audit, Malunga sorcerer teacher, GM bypass, sprite-less item purge
+
+### `/reload` talkaction registered + `logCommand` stub
+
+`data/talkactions/scripts/reload.lua` was sitting in the repo with the
+full `reloadTypes` table (actions / talkactions / npc / items / spells /
+…) but never declared in `data/talkactions/talkactions.xml`. Typing
+`/reload anything` returned "Unknown command". Added the entry next to
+`/pos`:
+
+```xml
+<talkaction words="/reload" separator=" " script="reload.lua" />
+```
+
+Once registered, the script blew up on first use:
+`attempt to call a nil value (global 'logCommand')`. Both `reload.lua`
+and `force_raid.lua` audit-log via `logCommand(player, words, param)`
+but no lib defines it. Stubbed in `data/lib/compat/compat.lua`:
+
+```lua
+function logCommand(player, words, param)
+    local name = (player and player.getName and player:getName()) or '?'
+    local line = string.format('[%s] %s: %s %s',
+        os.date('%Y-%m-%d %H:%M:%S'), name, words or '', param or '')
+    print(line)
+    local f = io.open('data/logs/commands.log', 'a')
+    if f then f:write(line, '\n'); f:close() end
+end
+```
+
+Both fixes need a server restart on first deploy because `compat.lua`
+is loaded at boot (not by `/reload`) and the broken `/reload` itself
+can't reload `/reload`. After the restart, `/reload <type>` works for
+subsequent edits.
+
+### Katana lever simplified (action 3107)
+
+`data/actions/scripts/switch/rook/katana door.lua` used to recreate a
+runtime wall at (32177, 32148, 11) every toggle to gate access — but
+the map already had a static wall there, so the engine was painting a
+door over existing geometry. Stripped the wall toggle. Lever now just
+spawns/removes a teleport at (32178, 32144, 11) → (32174, 32147, 11).
+The exit-side teleport at (32171, 32149, 11) was already in the
+.otbm.
+
+### Travel L>=50 cost gate removed
+
+Two paths in `data/npc/lib/npcsystem/modules.lua` had
+`if cost and cost > 0 and player:getLevel() >= 50 then`:
+
+- `StdModule.travel` (the one charging gold)
+- `StdModule.say` (the dialog renderer that shows the cost)
+
+A level-49 player would see "for free" but get charged silently after
+my Day-13 partial fix to `.travel` only. Removed `>= 50` from BOTH so
+the announced cost matches the deducted cost regardless of level.
+
+### `Urkalio` + `Hofech` `module_shop=1` added
+
+Both XMLs declared `shop_buyable` but missed
+`<parameter key="module_shop" value="1" />`. `parseParameters` only
+creates a `ShopModule` when that flag is non-zero, so neither NPC's
+trade window opened — saying "trade" hit the FocusModule's farewell
+fallback. One-line fix per XML.
+
+### 12 double-registered shops consolidated to Lua-only
+
+`Bashira / Carina / Chephan / Dario / Edvard / Eremo / Irea /
+Livielle / Rachel / Shanar / Shiriel / Tesha` all declared
+`module_shop=1` with a `shop_buyable` list in their XML AND a separate
+`ShopModule:new() + addBuyableItem` block in their Lua. Both modules
+push to `npcHandler.shopItems` and register a duplicate `trade`
+keyword. Functional but wasteful. Migrated each XML's items into the
+Lua (using the `Cf*` alias map from `data/npc/lib/configuration.lua`
+to deduplicate by serverId), then stripped the four shop parameters
+from each XML.
+
+**Format trap to remember**:
+`shopModule:addBuyableItem(names, itemid, cost, itemSubType, realName)`
+— the 4-arg shorthand `(names, id, price, name)` makes `itemSubType`
+the name string. `addBuyableItem` then defaults `realName` to
+`ItemType:getName()` which returns "" for items only in `items.otb`
+(no `items.xml` entry), so `shopItems` ends up with `name=""` and the
+NPC's "I'm selling X" dialog renders as `, , ,` holes. Always pass
+the 5-arg form when migrating, even if subType is meaningless: just
+use `1`.
+
+### Rachel cleanup
+
+Of the 14 lines migrated to Rachel, all 14 were post-7.72/8.0 items
+the user explicitly didn't want sold (modern potion line, three flask
+sizes, Wand of Voodoo, spellwand, talon). Removed the migrated block
+entirely. Rachel keeps her original Lua-defined offer (spellbook,
+magic lightwand, life/mana fluid + bps, wands, rods, bp_sd, bp_uh)
+and sells (vial, all wands and rods).
+
+Verified for the 13 stripped items that they have no monster drops,
+so removing them from Rachel removes them from the server entirely.
+Talon (2151) was the only would-be-removed item with monster loot,
+and Voodoo (8922) is sold by Haroun/Romir/Siflind, so neither is
+actually gone — left as-is in their other sources.
+
+### Rune charges sync across the 3 sources
+
+User-defined rune charge table:
+
+```
+Animate Dead          1 -> 2
+Envenom               5 -> 3
+Explosion             6 -> 3
+Great Fireball        4 -> 2
+Heavy Magic Missile  10 -> 5
+Magic Wall            3 -> 4
+Soulfire              5 -> 2
+```
+
+Updated three sources together so they don't drift:
+1) `data/items/items.xml` `<attribute key="charges">` — drives
+   `Item::getStackMax()` (the per-rune stack cap from Day-13).
+2) `data/spells/spells.xml` `<rune charges="N">` for spell info display.
+3) `data/spells/scripts/conjuring/*.lua` — the count argument of
+   `creature:conjureItem(reagent, conjureId, count)`.
+
+Frost Magic Missile (`adori glaci`) was in the user's reference list
+but has no `<instant>/<rune>/script` in this server's spells.xml — left
+out of the sync.
+
+### `config.lua` rate edits (gitignored, per-instance)
+
+- `rateExp = 1`, `rateSkill = 1`, `rateLoot = 1`, `rateMagic = 1`
+- `experienceStages = { {minlevel = 1, multiplier = 1} }` (collapsed
+  the 5-stage Realera staircase to a single 1x band so the
+  `rateExp` number alone controls XP)
+- `maxMessageBuffer = 4 -> 8`
+
+`config.lua` is gitignored. Re-apply per instance.
+
+### GM bypass on six quest-gated NPCs
+
+`Alesar / Hairycles / Haroun / Nah'Bob / Rashid / Yaman` each have a
+`local function onTradeRequest(cid)` callback (registered via
+`CALLBACK_ONTRADEREQUEST`) that returns false unless the player has a
+specific quest storage value. ADM Lemos can't open the trade window
+without doing the quest. Patched the callback to short-circuit on GM
+access:
+
+```lua
+local _gmPlayer = Player(cid)
+if _gmPlayer and _gmPlayer:getGroup() and _gmPlayer:getGroup():getAccess() then
+    return true
+end
+-- existing storage check stays unchanged below
+```
+
+**Pitfall** — first patch attempt used Python's `re.sub` with
+`'\\1...'` as a regular triple-quoted string. `\\1` parsed by Python
+becomes `\1` which is the literal byte `0x01` — NOT the regex group
+backreference. Replacement scrubbed the `local function
+onTradeRequest(cid)` line and inserted a control character, breaking
+the entire script load. NPCs went silent (no greet, no anything)
+until git-checkout + re-patch with `r'\1...'` (raw string).
+
+### 4 spawnless NPCs moved to `data/npc/deadfiles/` (3 ended up there)
+
+- `Jessica1` — duplicate of Jessica, no spawn entry
+- `Alesar1` — duplicate of Alesar, no spawn
+- `Captain HabaOpenSea` — no spawn
+- `Nah'bob` — moved here briefly, then **restored** (see below)
+
+The Nah'bob move was a mistake. My Python spawn check used a
+case-sensitive grep for `name="Nah'bob"` (lowercase b) which missed
+the actual spawn entries that use `name="Nah'Bob"` (capital B).
+Server boot started yelling
+`[Error - Npc::loadFromXml] Failed to load data/npc/Nah'Bob.xml`
+on the spawner. Moved the XML back to `data/npc/Nah'Bob.xml`. Lesson:
+**spawn name lookups must be case-insensitive** — Tibia map names
+have inconsistent casing (`Nah'Bob` vs `Mr. West` vs `Siflind` typo
+for `Silfind`).
+
+### NPC walkaway "Good bye, -1." — Lua scope bug fix
+
+User report: Tothdral and other NPCs greeted with the player's name
+but walkaway messages showed `Good bye, -1.`. Bug at
+`data/npc/lib/npcsystem/npchandler.lua` line 494:
+
+```lua
+local player = Player(cid)
+if player then
+    local playerName = player:getName()
+    -- ...
+else
+    playerName = -1
+end
+
+local parseInfo = { [TAG_PLAYERNAME] = playerName }
+```
+
+`local playerName = player:getName()` is declared INSIDE the `if`
+block, so its scope ends at the matching `end`. The `parseInfo` line
+references a GLOBAL `playerName` that's only set in the `else`
+branch (-1) or by some prior unrelated NPC's invocation. So the
+`else` value -1 leaks across NPC interactions for any subsequent
+walkaway message. Fixed by declaring `local playerName = -1` above
+the if/else:
+
+```lua
+local playerName = -1
+if player then
+    local n = player:getName()
+    if n then playerName = n end
+end
+local parseInfo = { [TAG_PLAYERNAME] = playerName }
+```
+
+This file is shared by all NPCs, so the fix is global.
+
+### Malunga converted to Sorcerer Guild Leader (spell teacher)
+
+The user noticed Malunga's trade window had 38 quest items, **0 of
+them dropped from any monster** in this server, all 38 had
+`clientId=0` in items.otb (no sprite). Pure dead inventory — players
+visiting her saw an empty/broken trade. Converted her into a
+sorcerer-only spell teacher (Liberty Bay):
+
+- Stripped `module_shop=1` and the `shop_sellable` list from
+  `data/npc/Malunga.xml`.
+- Rewrote `data/npc/scripts/Malunga.lua` Gregor-style with a `teach`
+  helper that wires `keywordHandler:addKeyword({name})` to
+  `StdModule.say` ("Would you like to learn X for N gold?") plus
+  `yes`/`no` children. `yes` calls `StdModule.learnSpell` with
+  `vocation = 1` (sorcerer; master sorcerer is implicit via vocation
+  inheritance).
+- Hooked all 46 sorcerer-only `<instant>` spells from `spells.xml`
+  with Cipsoft 8.0 reference prices (Light free, Find Person 80,
+  Light Healing 170, Magic Shield 450, Great Fireball 1200, Magic
+  Wall 1900, Sudden Death 3000, Ultimate Explosion 5000).
+
+**Trap**: first version used the spell incantation (`exura vita`,
+`adori flam`) as the keyword, but players type the spell NAME
+(`ultimate healing`, `fireball`). Fixed by using
+`string.lower(name)` as the primary keyword and adding the
+incantation as an `addAliasKeyword` so both forms work.
+
+### Bulk-remove sprite-less items from 47 NPC shops
+
+User asked to clean every NPC's inventory of items that don't render
+in 8.0. Heuristic: an item is sprite-less if its `items.otb` clientId
+is `0` AND it has no `<item>` entry in `items.xml`. Walked all NPC
+Lua scripts (resolving `Cf*` aliases) and XML `shop_buyable` /
+`shop_sellable` / `shop_buyable_containers` parameters; dropped any
+matching line/entry. Total: 4 Lua lines + 296 XML entries removed
+across 47 NPCs.
+
+Heaviest casualties:
+- `Rashid` -79 (the wandering trader's entire post-8.0 buyback list)
+- `Tothdral` -12, `Topsy` -12, `Siflind` -17, `Romir` -14
+- 9 furniture sellers (Eddy/Hofech/Janz/Nydala/Ukea/Vera/Yoem/Peggy/
+  Gamon) -6 to -7 each (8.5+ bed kits, chimney, trophy stand)
+- 5 gem sellers (Briasol/Chantalle/hanna/Tezila/Jessica) -8 each
+- Cedrik / Robert / Dario - special arrows + 8.5 bolts
+
+After this pass, NPC trade windows render cleanly — every item shown
+has a real client sprite. Gameplay impact: players can no longer farm
+post-8.0 loot to vendor at Rashid (he was buying 79 items that don't
+exist in the world anyway, since 0 monsters dropped them — net
+neutral).
+
+### Day-14 file index
+
+Server (this repo):
+- `data/talkactions/talkactions.xml` — register `/reload`
+- `data/lib/compat/compat.lua` — `logCommand` stub
+- `data/actions/scripts/switch/rook/katana door.lua` — lever
+  simplified
+- `data/npc/lib/npcsystem/modules.lua` — drop L>=50 gate
+- `data/npc/lib/npcsystem/npchandler.lua` — walkaway -1 fix
+- `data/npc/Urkalio.xml` + `data/npc/Hofech.xml` — module_shop=1
+- 12 consolidated NPCs (XML + Lua pairs)
+- `data/npc/scripts/Rachel.lua` — migrated block stripped
+- `data/npc/Malunga.xml` + `data/npc/scripts/Malunga.lua` — sorcerer
+  spell teacher
+- `data/items/items.xml`, `data/spells/spells.xml`,
+  `data/spells/scripts/conjuring/*.lua` — rune charges sync
+- 6 NPC Lua scripts — GM bypass (Alesar / Hairycles / Haroun /
+  Nah'Bob / Rashid / Yaman)
+- 4 NPCs moved to `data/npc/deadfiles/` (Jessica1, Alesar1,
+  Captain HabaOpenSea, [Nah'Bob restored])
+- 47 NPC shops cleaned (XML and/or Lua)
+
+`config.lua` (gitignored, NOT committed):
+- `rateExp/Skill/Loot/Magic = 1`, single-band experienceStages,
+  maxMessageBuffer = 8
+
+### Open thread — vocation spell teachers
+
+Server has `needlearn="0"` on 73 spells and `needlearn="1"` on 40
+(default = "0", auto-learn). User wants every spell to require
+NPC-buy (Cipsoft 8.0 model). Pending tasks for next session:
+1) Flip every `needlearn` to `1` (or set the default in spells.xml
+   parser). Need to verify which spells should remain auto-learned
+   (probably none for vocation spells; some script-only utility
+   spells maybe).
+2) Pick canonical 8.0 NPC teachers for each vocation:
+   - **Sorcerer** — `Malunga` already setup (Day-14). Add `Lea`
+     (Thais) and `Muriel` (Thais) for redundancy.
+   - **Druid** — convert `Hjaern` (Carlin) and `Padreia` (Carlin),
+     `Maealil` (Ab'Dendriel), `Chondur` (Liberty Bay).
+   - **Paladin** — convert `Elane` (Ab'Dendriel) and `Razan` (Edron).
+     Both currently exist as shop/addon NPCs; replace inventory.
+   - **Knight** — `Gregor` (Ab'Dendriel) already a teacher; add
+     `Ulrik` (Kazordoon) and `Niccolai` (Thais — needs creation).
+3) Use the same `teach(name, words, price, level)` helper pattern
+   from Malunga, customize per vocation. Spell prices from Tibia
+   wiki 8.0 reference.
+
+---
+
+## 13. Day-15 — Spellbook lib + addon dialog purge
+
+### Big picture
+
+Two intertwined cleanups happened in one session:
+
+1. **Spell teacher network**: 29 NPCs across the 4 vocations now sell
+   every spell of their vocation (Cipsoft 8.0 prices, level gates),
+   driven by a shared library (`data/npc/lib/spellbook.lua`). All 117
+   instant spells in `data/spells/spells.xml` were flipped to
+   `needlearn="1"` so they MUST be bought from an NPC.
+2. **Addon/outfit dialog purge**: 37 NPCs that offered Tibia 8.6+
+   addon quests had that dialog stripped — Realera doesn't grant
+   custom outfits or addons; the player picks any outfit/addon on
+   character creation. Non-addon dialog (other quests, shops, voice,
+   chat keywords) was preserved on each NPC.
+
+Plus: Cassino moved to deadfiles (gambling NPC, not used).
+
+### Spellbook library — `data/npc/lib/spellbook.lua`
+
+New file. Single shared catalog of every learnable spell per vocation
+with Cipsoft 8.0 reference prices. Each NPC who teaches spells just
+calls:
+
+```lua
+Spellbook.teach(npcHandler, keywordHandler, vocId, Spellbook.<voc>)
+```
+
+Vocation IDs: `1=sorc, 2=druid, 3=pal, 4=knight`. Promoted IDs (5-8)
+inherit automatically via TFS `learnSpell`.
+
+Catalog format per entry: `{name, words, price, level}` — e.g.
+`{'Fireball', 'adori flam', 1200, 27}`. Prices and levels match the
+8.0 wiki reference. The catalog is sorted by name length DESC before
+keyword registration so longer names register first (otherwise
+`great fireball` would substring-match `fireball`).
+
+`Spellbook.teach` registers, per spell:
+- A keyword node on the spell name (`fireball`)
+- An alias on the incantation (`adori flam`) when it differs
+- `yes` / `no` child keywords for the buy flow
+
+Plus a single generic `spells` help keyword per NPC (vocation-aware
+text with 4 example spell names that render as clickable
+`{spell name}` links). For hybrid teachers (Eroth, Rahkem teach
+sorc + druid via two `Spellbook.teach` calls), the help text
+auto-extends to "all sorcerer and druid spells".
+
+The lib is auto-loaded from `data/npc/lib/npc.lua`:
+```lua
+dofile('data/npc/lib/spellbook.lua')
+```
+
+**To revert the whole spell teacher network**: delete
+`data/npc/lib/spellbook.lua` + the dofile line, then `git checkout`
+each of the 29 spell teacher scripts back to before this session.
+Spells without `needlearn="1"` would also need restoring in
+`spells.xml` (33 lines flipped).
+
+### Spell teacher NPCs (29) — explicit greet + Spellbook.teach
+
+Each spell teacher's greet is now explicit so the player knows they
+teach spells without having to guess the keyword:
+
+> *"Greetings, |PLAYERNAME|. I teach &lt;voc&gt; {spells}. What would you
+> like to learn?"*
+
+For 5 NPCs that ALSO have a shop (XML `module_shop="1"`), the greet
+mentions both:
+
+> *"...I teach &lt;voc&gt; {spells} and {trade} a few items..."*
+
+For NPCs with a `greetCallback` (dynamic per-player greet — Duria,
+Etzel, Marvik, Muriel, Umar), the dynamic message itself was
+modified to include the spell mention.
+
+| NPC | Vocation | City | Has shop? |
+|---|---|---|---|
+| Asrak | knight | ? | no |
+| Chatterbone | sorcerer | ? | no |
+| Chondur | druid | Liberty Bay | YES |
+| Duria | knight | Kazordoon | no |
+| Elane | paladin | Ab'Dendriel | YES |
+| Eroth | sorc + druid | hybrid | no |
+| Etzel | sorcerer | Kazordoon | no |
+| Gregor | knight | Ab'Dendriel | no |
+| Gundralph | druid | ? | no |
+| Hagor | paladin | ? | no |
+| Hjaern | druid | Nibelor | no |
+| Lea | sorcerer | Carlin | no |
+| Legola | paladin | Carlin | (empty) |
+| Lungelen | sorcerer | ? | no |
+| Maealil | druid | Ab'Dendriel | no |
+| Malunga | sorcerer | Liberty Bay | no |
+| Marvik | druid | Thais | no |
+| Muriel | sorcerer | Thais | no |
+| Padreia | druid | Carlin | no |
+| Rahkem | sorc + druid | Darashia | no |
+| Razan | paladin | Edron | no |
+| Shalmar | druid | ? | no |
+| Smiley | druid | ? | no |
+| Thorwulf | knight | ? | no |
+| Trisha | knight | Carlin | no |
+| Umar | paladin | (Marid djinn) | no |
+| Ulrik | knight | Kazordoon | YES |
+| Ustan | druid | Port Hope | YES |
+| Sam | knight | Thais | YES (shop only — see below) |
+
+**Reverted from spell teaching mid-session** — these were given
+`Spellbook.teach` by my prior automation but in real Cipsoft 8.0 they
+are NOT teachers (just shop NPCs); user explicitly asked to revert:
+- **Gorn** (Thais general goods) — `Spellbook.teach` removed; he
+  remains a regular merchant. His own dialog already said
+  `"Magic? Ask a sorcerer or druid about that."`.
+- **Sam** (Thais blacksmith) — same treatment. Greet reverted to
+  *"Welcome to my shop, adventurer |PLAYERNAME|! I {trade} with
+  weapons and armor."*. Old Backpack quest + 2000 steel shields
+  Foolish Quest preserved.
+
+### Addon/outfit dialog purge (37 NPCs)
+
+**Policy**: Realera's character creation lets you pick any outfit
+and any addon directly. So every Tibia 8.6+ NPC chain that gave
+players outfits/addons is dead code in this server. We removed only
+the addon-related branches; everything else (other quests, shop
+trade, chat, voice) is preserved.
+
+**Removal patterns applied**:
+- `addOutfit(N)` / `addOutfitAddon(N, X)` calls — removed.
+- Storage variables tied to addon progression
+  (`Storage.OutfitQuest.*`, `foriental`, `fmage`, etc.) — removed.
+- Helper functions named `*First`, `*Second`, `OrientalFirst`,
+  `BeggarFirst`, etc. — removed.
+- Keywords `addon`, `outfit`, and addon-specific item names
+  (`shoulder spike`, `scimitar`, `hooded cloak`, `dress`, `staff`,
+  `hat`, etc.) — removed.
+- `creatureSayCallback` blocks that only handled addon flow —
+  removed; `setCallback(CALLBACK_MESSAGE_DEFAULT, …)` registration
+  removed when callback was empty.
+- Multi-quest NPCs (Avar Tar, Lugri, The Queen of the Banshees,
+  etc.): only the addon branch was excised; the other branches
+  (cookie quest, KitNo task, seventh seal quest, etc.) stay.
+
+**Effect classes** (so you know what to expect from each NPC):
+
+| Class | Result | NPCs |
+|---|---|---|
+| Pure addon NPC | Reduced to greet-only stub | Atrad, Myra, Ajax, Bron, Erayo, Morgan |
+| Addon + spell teacher | spellbook preserved, addon stripped | Razan, Trisha, Elane, Gregor, Hjaern, Ustan |
+| Addon + shop/quest hub | shop & non-addon dialog preserved | Habdel, Cornelia, Lubo, Hanna, Norma, Sandra, Tom, Sam, King Tibianus, Queen Eloise, Emperor Kruzak, Bozo, Amber |
+| Mixed quest NPC | only addon branch removed | Ariella, Avar Tar, Hjaern, Lugri, The Queen of the Banshees, Simon the Beggar, Irmana, Miraia, Lynda, Chondur |
+| One-line keyword strip | only `outfit` keyword removed | Gelagos, Vescu (kept troll flavor) |
+
+**Full list of 37 NPCs touched**: Atrad, Habdel, Myra, Razan, Trisha,
+Ajax, Amber, Ariella, Avar Tar, Bozo, Bron, Chondur, Cornelia, Elane,
+Emperor Kruzak, Erayo, Gregor, Hanna, Hjaern, Irmana, King Tibianus,
+Lubo, Lugri, Lynda, Miraia, Morgan, Norma, Queen Eloise, Sam, Sandra,
+Simon the Beggar, The Queen Of The Banshees, Tom, Ustan, Zoltan,
+Gelagos, Vescu.
+
+**To revert addon stripping for any single NPC**:
+```
+git checkout <commit-before-this-session> -- data/npc/scripts/<Name>.lua
+```
+Each NPC was a separate edit so reverting one doesn't affect others.
+
+### Cassino moved to deadfiles
+
+`Cassino.xml` and `cassino.lua` moved to `data/npc/deadfiles/` and
+`data/npc/deadfiles/scripts/` respectively. He was a gambling/casino
+NPC; only spawn reference was already in `bkp/global-spawn_bkp.xml`
+(historical backup), nothing in the live spawn. Revert: just `git mv`
+both files back to the original locations.
+
+### NPC compat shim — `npchandler:say` nil-focus tolerance
+
+(Kept from previous Realera session, mentioned here for context: many
+spell teacher NPCs and addon NPCs called `npcHandler:say('text')`
+without passing a focus. Lua 5.5 raises 'table index is nil' on the
+resulting `self.eventSay[nil]`. The lib falls back to the most recent
+focus, then to ambient `selfSay`. See `data/npc/lib/npcsystem/`.)
+
+### Helper scripts produced this session
+
+- `move_unused_npcs.py` — sweeps NPC XMLs in `data/npc/` whose name
+  doesn't appear in `data/world/global-spawn.xml`; moves them and
+  their matching script into `data/npc/deadfiles/`. Untracked
+  before — committing now. Re-runnable.
+- `sync_and_clean_npcs.py` — earlier 3-phase NPC cleanup helper.
+  Reference / re-runnable.
+
+Both scripts are idempotent — they can be re-run safely after future
+spawn changes.
+
+### Day-15 file index
+
+```
+data/npc/lib/spellbook.lua                NEW — shared catalog + Spellbook.teach
+data/npc/lib/npc.lua                      MODIFIED — dofile spellbook.lua
+data/spells/spells.xml                    MODIFIED — needlearn=1 across all instants
+data/npc/scripts/<29 spell teachers>.lua  MODIFIED — explicit greet + Spellbook.teach
+data/npc/scripts/<37 addon-strip NPCs>.lua MODIFIED — addon dialog removed
+data/npc/scripts/Gorn.lua                 REVERTED — Spellbook.teach removed
+data/npc/scripts/Sam.lua                  REVERTED — Spellbook.teach removed (kept blacksmith)
+data/npc/Cassino.xml                      MOVED → deadfiles/
+data/npc/scripts/cassino.lua              MOVED → deadfiles/scripts/
+data/npc/deadfiles/                       NEW DIR (1000+ NPCs) — accumulated from earlier
+                                          unused-NPC sweeps; committing now.
+data/world/bkp/                           NEW DIR — backups of original world.otbm/spawns
+move_unused_npcs.py                       NEW — unused-NPC sweep helper
+sync_and_clean_npcs.py                    NEW — 3-phase NPC cleanup helper
+```
+
+### Things still NOT done (carry forward)
+
+1. **Premium gating audit** — Server policy: every NPC of a vocation
+   teaches the FULL spell list. There are no premium-only spells;
+   free and premium accounts buy from the same NPCs at the same
+   prices. (Premium only gates city access via captains —
+   `data/lib/miscellaneous/free_cities.lua`.) `Spellbook.teach`
+   passes `premium = false` always. If we ever want premium-locked
+   spells, change the per-spell call site.
+2. **Niccolai / Thais knight teacher** — section 12's open thread
+   suggested creating a Thais knight teacher; not done. Gregor in
+   Ab'Dendriel + Sam in Thais (now reverted to non-teacher) means
+   Thais has no knight teacher locally. Not blocking — Gregor is one
+   boat ride away.
+3. **Test pass on the 28 spell teachers** — User flagged that they
+   should sit down and verify each NPC actually responds to "hi" /
+   "spells" / spell name / "yes". Sample success: Lea answers all 4
+   correctly after this session's fixes.
+
+---
+
+## 14. Day-15.5 — `queryDestination` engine bugs and Lua workarounds
+
+While testing as GM, the user surfaced three bugs that all trace back
+to the same routine: `Player::queryDestination` in `src/player.cpp`.
+They all manifest in different ways but the algorithm has two
+distinct flaws:
+
+### Bug A — autoStack merge with maxed-out target replaces the target
+
+`player.cpp:2727` (and the parallel container path at 2784):
+```cpp
+if (inventoryItem->equals(item) && inventoryItem->getItemCount() < 100) {
+    index = slotIndex;
+    *destItem = inventoryItem;
+    return this;
+}
+```
+
+The merge target is selected if `count < 100`. But for stackable
+runes the actual cap is `getStackMax()` which equals `it.charges`
+from items.xml (e.g., 4 for fireball, 5 for SD). A maxed-out
+4-charge fireball (4/4) is still `< 100`, so it gets returned as a
+merge target.
+
+`internalAddItem` then runs `n = min(stackMax - itemCount, m) = 0`,
+fails to merge any charges, falls into the `count == itemCount`
+branch and calls `toCylinder->addThing(index, item)`. For
+single-item slots like hands `Player::addThing` just overwrites
+`inventory[index]` — the maxed rune in hand is **replaced by a
+1-charge new rune**, losing the original.
+
+**Symptoms it caused**:
+- `/i fireball rune` while a 4/4 fireball is in hand → the hand
+  rune resets to 1 charge (the old one is lost).
+- `/i sudden death rune` repeatedly with a full main BP → SDs
+  pile up overflowing through inner BP slots, "phantom" slots
+  appear past index 20 because nested containers get pushed
+  around.
+- Casting `adori flam` with a blank rune in an inner BP → the
+  newly-conjured fireball gets routed into hand (or onto an
+  existing rune in hand), each subsequent cast replaces the hand
+  rune so the player ends up with one rune total no matter how
+  many blanks they consume.
+
+### Bug B — BFS container traversal prefers shallow siblings over deep children
+
+`player.cpp:2747-2802` builds a queue of every container reachable
+from the player's slots, processes it FIFO. When a container A is
+processed and we descend into its child container B, B is pushed to
+the END of the queue rather than processed next. So if there is
+another sibling container C also in the slot list, C is tried
+before B.
+
+**Symptoms**:
+- Player has full main BP with an inner BP inside (with space).
+  Buys 3 parcels at NPC. The 1st and 2nd land in hands, the 3rd
+  has nowhere to go — engine routes it into one of the hand
+  parcels (an empty sibling container) instead of descending into
+  the inner BP that has free slots.
+- Player has 10k crystal coins in ammo slot, full main BP +
+  inner-BP-with-space, buys 3 parcels. The displaced coins flow
+  into the new parcel that took the ammo slot rather than into
+  the inner BP.
+
+The intuitive behaviour is DFS: when a sibling is full, descend
+into its children before moving to the next sibling.
+
+### Why we did NOT patch the engine yet
+
+Both bugs are 4-6 line patches in one source file, but
+`queryDestination` runs on every item placement in the game
+(loot drops, NPC trade, manual moves, addItem calls, etc.). A
+behavioural change there has wide blast radius — could shift loot
+distribution, trade window UX, container behaviour for monsters
+that pick up items, etc.
+
+The user wants to ship gameplay fixes first and keep the engine
+binary unchanged for now (no rebuild required). So we mitigated at
+the Lua level for the two highest-impact paths.
+
+### Fix 1 — `data/talkactions/scripts/create_item.lua` (`/i` GM command)
+
+Detects rune ItemType and takes a separate code path:
+
+```lua
+if itemType:isRune() then
+    local fullCharges = math.max(1, itemType:getCharges())
+    for i = 1, runesToCreate do
+        local item = Game.createItem(itemType:getId(), fullCharges)
+        local ret = player:addItemEx(item, false, INDEX_WHEREEVER, FLAG_IGNOREAUTOSTACK)
+        if ret ~= RETURNVALUE_NOERROR then break end
+    end
+end
+```
+
+Key choices:
+- `Game.createItem(id, fullCharges)` — each `/i fireball rune`
+  produces a fresh 4/4 rune (not a 1-charge stacker), regardless
+  of how many casts came before.
+- `addItemEx(item, false, INDEX_WHEREEVER, FLAG_IGNOREAUTOSTACK)`
+  — `false` is `canDropOnMap=false` so failures don't silently
+  drop on the floor, and the flag tells `queryDestination` to
+  skip the bugged autoStack branch entirely. Each rune lands in
+  a real free slot or fails cleanly with "Not enough room.".
+- Non-rune behaviour unchanged (gold, fluids, regular items keep
+  the old `player:addItem` path).
+
+### Fix 2 — `data/spells/lib/spells.lua` (`Player:conjureItem`)
+
+The vanilla impl was `removeItem(blank) + addItem(rune)`. Both
+calls funnel through the buggy `queryDestination`. The reliable
+fix is what original Cipsoft did: transform the blank rune in
+place. Same cylinder, same slot, just new id and charges. No
+queryDestination, no addItem, no map drop.
+
+```lua
+local reagent = self:getItemById(reagentId, true)  -- deep search
+if not reagent then return ... end
+reagent:transform(conjureId, conjureCount)
+```
+
+`Item:transform` calls `Game::transformItem` which for items of
+the same `type` (rune→rune) updates id and subtype atomically in
+the same cylinder slot — exactly the behaviour spells should
+have.
+
+After this fix:
+- Cast `adori flam` with blank in inner BP → fireball appears in
+  inner BP at the blank's old slot. Hand untouched.
+- Cast again with another blank → second fireball appears in inner
+  BP. Player accumulates runes one per cast as expected.
+
+### Engine patches landed (Day-15.5 follow-up)
+
+After confirming the Lua workarounds worked, both queryDestination
+fixes were applied in `src/player.cpp` and the binary rebuilt.
+
+**Patch 1 — autoStack threshold (lines 2732 and 2797)**:
+```cpp
+// before:
+if (inventoryItem->equals(item) && inventoryItem->getItemCount() < 100) {
+// after:
+if (inventoryItem->equals(item) && inventoryItem->getItemCount() < inventoryItem->getStackMax()) {
+```
+Same change at line 2797 with `tmpItem`. Compares against the
+target's actual stack cap (`charges` for runes), not a hard-coded
+100. Maxed-out 4/4 fireball is no longer selected as a merge
+target, so internalAddItem can't fall into the addThing-replace
+branch and overwrite the existing rune.
+
+**Patch 2 — BFS → DFS (container processing loop, lines 2752-2806)**:
+Introduced an `insertPos` tracker. When descending into
+`tmpContainer` and finding child containers, they are inserted at
+position `i+1` (right after current) rather than appended at the
+end:
+```cpp
+size_t insertPos = i; // i has already advanced past current
+...
+if (Container* subContainer = ...) {
+    containers.insert(containers.begin() + insertPos, subContainer);
+    ++insertPos;
+}
+```
+Done in both the non-stackable path (line 2776) and the stackable
+path (line 2804). This makes queryDestination DFS so a displaced
+item descends into existing inner containers before considering
+newly-equipped sibling containers (parcels, etc.).
+
+Lua workarounds in spells.lua and create_item.lua are still in
+place — they're harmless overlays now that the engine is fixed,
+and they keep things robust if the binary ever gets reverted.
+
+### Things to test after the engine rebuild
+
+Smoke tests for the player.cpp patches:
+1. Have a 4/4 fireball in hand. Pick up another fireball stack
+   from an NPC or `/i fireball rune`. Verify the hand rune is NOT
+   replaced — a separate stack should appear elsewhere or the
+   pickup should fail cleanly.
+2. Full main BP with an inner BP (with space). Buy 3 parcels.
+   Verify the 3rd parcel descends into the inner BP, not into
+   the parcel just placed in another slot.
+3. 10k crystal coins in ammo slot, full main BP + inner BP space.
+   Buy 3 parcels. Verify the displaced coins land in the inner BP,
+   not in the new parcel.
+4. NPC trade — buy a stackable item that already exists in
+   inventory, verify it merges with existing stack only when the
+   stack has actual room (`< stackMax`), not just `< 100`.
+
+---
+
+## 15. Day-15.6 — DoT keeps in-fight alive (no PZ entry / logout while burning)
+
+User reported a player being able to walk into a depot and log out
+while still on fire from a fire field rune (`adevo grav flam`). The
+in-fight timer is just `PZ_LOCKED` (60s) and ticks down independently
+of the actual fire damage, so once 60s passed the player became
+"safe" even though they were still taking fire damage every 9s.
+
+### Fix
+
+`Player::onEndCondition` in `src/player.cpp` now refuses to clear
+`pzLocked` when `CONDITION_INFIGHT` is the condition that just ended
+and the player has any active hostile DoT. The DoT list:
+`POISON, FIRE, ENERGY, BLEEDING, DROWN, FREEZING, DAZZLED, CURSED`
+— every condition that ticks damage on a player.
+
+If any of those is active, we re-arm in-fight via
+`addInFightTicks()` for another `PZ_LOCKED` window. The next time
+in-fight expires we run the same check. Once the player stops
+burning, the next end-of-condition cleans up normally:
+`onIdleStatus + pzLocked = false + clearAttacked + skull cleanup`.
+
+`pzLocked` itself is never cleared while the player is burning, so
+both the PZ-entry check in `Tile::queryAdd` (line 571) and the
+logout check in `ProtocolGame::logout` (line 304) keep blocking.
+
+### Smoke tests
+
+1. Step on a fire field. While burning, try to walk into a depot
+   tile. Should be refused with the standard "you can't go there
+   while in fight" message.
+2. Step on a fire field. While burning, try to logout. Should be
+   refused with "You may not logout during a fight".
+3. Step on a fire field, walk away, wait 60s+ until in-fight icon
+   *should* be expiring. As long as fire is still damaging you, the
+   in-fight timer should keep refreshing.
+4. After fire condition wears off, wait another 60s — in-fight
+   should expire and you can walk into PZ / logout normally.
+
+### Note on hotkey runes & projectile attacks
+
+The same kind of "ataque sem pzlock" abuse can come through the
+attack list (right-click creature → attack) without ever entering
+in-fight on the attacker's side if the target is far away and the
+shot misses. Not currently mitigated. Open thread if it shows up.
+
+---
+
+## 16. Day-15.7 — Block rune use via battle list (and hotkey on target)
+
+User reported that selecting a rune (e.g. SD) and clicking a player
+in the battle list still landed the rune on them. Same with binding
+a rune to a hotkey set as "Use on Target" and pressing it while
+attacking someone.
+
+Server can't differentiate "use-with-creature on map" from "use-with
+-creature via battle list" — both arrive as protocol opcode 0x84
+(ProtocolGame::parseUseWithCreature). The block has to be
+client-side, in the otc clients we ship.
+
+### Two paths to block, three clients to patch
+
+**Battle-list path** — `modules/game_interface/gameinterface.lua`,
+function `onUseWith`, branch `clickedWidget:getClassName() ==
+'UICreatureButton'`. When the selected item is a rune, surface a
+white status message and bail. Also set
+`modules.game_battle.mouseWidget.cancelNextRelease = true` so the
+battle button's own `onMouseRelease` (which calls
+`g_game.attack(creature)`) doesn't fire on the same click — the
+user was seeing both the rune blocked AND the auto-attack starting.
+
+**Hotkey path** — `modules/game_hotkeys/hotkeys_manager.lua`, branch
+`hotKey.useType == HOTKEY_MANAGER_USEONTARGET`. This bypasses
+gameinterface entirely; it calls `g_game.useWith` /
+`useInventoryItemWith` on `g_game.getAttackingCreature()`. Block the
+same way when `hotKey.itemId` is in the rune range.
+
+### The client-id gotcha
+
+First attempt used `id >= 2260 and id <= 2316` because that's the
+server-side rune range from `data/items/items.xml`. It silently did
+nothing — every test showed runes still passing through.
+
+Debug print revealed `selectedThing:getId()` returns **3155** for
+SD, not 2268. Item:getId() in OTC reads from the dat file, which is
+the *client id*, while items.xml uses the *server id* (mapped via
+items.otb).
+
+Ran `parse_otb.py` over the active items.otb to get the mapping:
+
+```
+server 2260 (blank rune)        -> client 3147
+server 2261 (destroy field)     -> client 3148
+...
+server 2268 (sudden death rune) -> client 3155
+...
+server 2316 (animate dead rune) -> client 3203
+```
+
+The runes are contiguous in both spaces, just offset by 887. Final
+range used in the patches: `id >= 3147 and id <= 3203`. Same range
+in both gameinterface.lua and hotkeys_manager.lua.
+
+### Three clients are shipped/used
+
+| Path | Repo | Branch |
+|---|---|---|
+| `Realera OT/otcv8-dev` | `lemosss/otcv8-dev` | master |
+| `Realera OT/otclientv80` | `lemosss/otclientv8` | master |
+| `OT/otclientv8` | `lemosss/otclientv8` (duplicate working copy) | master |
+
+The user's actual runtime is otcv8-dev, but the patch was applied
+to all three so any client is consistent.
+
+### To verify the patch is loaded after a Lua edit
+
+OTC doesn't auto-reload modules. Either:
+- Close `otclient_gl.exe` and reopen.
+- `Ctrl+R` in-game (sometimes breaks visuals; full restart safer).
+
+Quick console (`Ctrl+T`) sanity check:
+```lua
+print(modules.game_interface.onUseWith)
+```
+Returns `function: 0x...` if the module is loaded. To confirm the
+specific patch is active without leaving the client, drop a temp
+`print('[REALERA-DEBUG] ...')` in the branch and watch the log
+window — that's how the client-id mismatch was caught here.
+
+### Reverting
+
+Each block is ~10 lines; revert by deleting the `if id >= 3147 and
+id <= 3203 then ... return end` chunk in both files. The
+`cancelNextRelease` line is harmless to leave in — it only fires
+when the rune block fires.

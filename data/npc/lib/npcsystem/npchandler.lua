@@ -490,13 +490,12 @@ if NpcHandler == nil then
 					if self.queue == nil or not self.queue:greetNext() then
 						local msg = self:getMessage(MESSAGE_WALKAWAY)
 						local player = Player(cid)
+						local playerName = -1
 						if player then
-							local playerName = player:getName()
-							if not playerName then
-								playerName = -1
+							local n = player:getName()
+							if n then
+								playerName = n
 							end
-						else
-							playerName = -1
 						end
 
 						local parseInfo = { [TAG_PLAYERNAME] = playerName }

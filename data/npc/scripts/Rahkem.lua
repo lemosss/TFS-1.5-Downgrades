@@ -96,4 +96,10 @@ keywordHandler:addAliasKeyword({'spark'})
 keywordHandler:addKeyword({'solitude'}, StdModule.say, {npcHandler = npcHandler, text = 'Talk to the hermit Eremo on the isle of Cormaya about this blessing.'})
 keywordHandler:addAliasKeyword({'wisdom'})
 
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 1, Spellbook.sorcerer)
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach sorcerer and druid {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())

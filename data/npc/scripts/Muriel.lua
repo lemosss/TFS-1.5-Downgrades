@@ -48,12 +48,15 @@ keywordHandler:addKeyword({'rod'}, StdModule.say, {npcHandler = npcHandler, only
 
 local function greetCallback(cid)
 	if Player(cid):isSorcerer() then
-		npcHandler:setMessage(MESSAGE_GREET, "Welcome back, |PLAYERNAME|!")
+		npcHandler:setMessage(MESSAGE_GREET, "Welcome back, |PLAYERNAME|. I teach sorcerer {spells}. What would you like to learn?")
 	else
-		npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|! Looking for wisdom and power, eh?")
+		npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach sorcerer {spells}. What would you like to learn?")
 	end
 	return true
 end
 
 npcHandler:setCallback(CALLBACK_GREET, greetCallback)
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 1, Spellbook.sorcerer)
+
 npcHandler:addModule(FocusModule:new())

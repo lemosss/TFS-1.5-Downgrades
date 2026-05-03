@@ -250,7 +250,23 @@ CORPSES = {
 FIELDS = {1487,1488,1489,1490,1491,1492,1493,1494,1495,1496,1500,1501,1502,1503,1504}
 
 
--- Generic rune/item conjuration helper (replaces deprecated function="conjureRune")
+-- Generic rune/item conjuration helper (replaces deprecated function="conjureRune").
+--
+-- The naive impl is removeItem(blank) + addItem(rune). Two engine bugs make
+-- that flow leak the conjured rune into hidden places:
+--
+--   1) queryDestination (player.cpp) walks slots BFS and fires autoStack on
+--      `count<100` instead of `getStackMax()`, so a maxed-out rune in hand
+--      can become the merge target → addThing() then replaces it.
+--   2) Player:addItem uses internalPlayerAddItem with `canDropOnMap=true` by
+--      default, so when queryDestination fails to find a slot inside a
+--      nested BP, the rune drops on the player's tile instead.
+--
+-- The reliable fix is what the original Cipsoft engine did: transform the
+-- blank rune in place. The reagent's slot/container is preserved, no
+-- queryDestination, no map drop. Item:transform(id, count) calls
+-- Game::transformItem which (for items of the same `type=rune` family)
+-- updates the id and subtype in the same cylinder slot atomically.
 function Player:conjureItem(reagentId, conjureId, conjureCount, effect)
 	if not conjureCount and conjureId ~= 0 then
 		local itemType = ItemType(conjureId)
@@ -263,23 +279,37 @@ function Player:conjureItem(reagentId, conjureId, conjureCount, effect)
 		end
 	end
 
-	if reagentId ~= 0 and not self:removeItem(reagentId, 1, -1) then
+	-- No reagent required (e.g. animate dead with no corpse): create normally.
+	if reagentId == 0 then
+		local item = self:addItem(conjureId, conjureCount)
+		if not item then
+			self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
+			self:getPosition():sendMagicEffect(CONST_ME_POFF)
+			return false
+		end
+		if item:hasAttribute(ITEM_ATTRIBUTE_DURATION) then
+			item:decay()
+		end
+		self:getPosition():sendMagicEffect(item:getType():isRune() and CONST_ME_MAGIC_RED or (effect or CONST_ME_MAGIC_BLUE))
+		return true
+	end
+
+	-- Find a blank rune anywhere in the player's inventory (deep search).
+	local reagent = self:getItemById(reagentId, true)
+	if not reagent then
 		self:sendCancelMessage(RETURNVALUE_YOUNEEDAMAGICITEMTOCASTSPELL)
 		self:getPosition():sendMagicEffect(CONST_ME_POFF)
 		return false
 	end
 
-	local item = self:addItem(conjureId, conjureCount)
-	if not item then
-		self:sendCancelMessage(RETURNVALUE_NOTPOSSIBLE)
-		self:getPosition():sendMagicEffect(CONST_ME_POFF)
-		return false
+	-- Transform in place. After this, `reagent` userdata points at the new
+	-- item (same slot, new id/charges).
+	reagent:transform(conjureId, conjureCount)
+
+	if reagent:hasAttribute(ITEM_ATTRIBUTE_DURATION) then
+		reagent:decay()
 	end
 
-	if item:hasAttribute(ITEM_ATTRIBUTE_DURATION) then
-		item:decay()
-	end
-
-	self:getPosition():sendMagicEffect(item:getType():isRune() and CONST_ME_MAGIC_RED or (effect or CONST_ME_MAGIC_BLUE))
+	self:getPosition():sendMagicEffect(reagent:getType():isRune() and CONST_ME_MAGIC_RED or (effect or CONST_ME_MAGIC_BLUE))
 	return true
 end

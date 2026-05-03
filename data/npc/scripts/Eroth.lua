@@ -39,4 +39,10 @@ keywordHandler:addKeyword({'sorcerer'}, StdModule.say, {npcHandler = npcHandler,
 keywordHandler:addKeyword({'vocation'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "You are narrow minded to think in such boundaries."})
 keywordHandler:addKeyword({'spellbook'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Cenath rarely use spellbooks. The minor castes rely on them though."})
 
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 1, Spellbook.sorcerer)
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach sorcerer and druid {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())
