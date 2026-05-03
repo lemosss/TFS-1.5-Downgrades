@@ -2993,3 +2993,164 @@ sync_and_clean_npcs.py                    NEW — 3-phase NPC cleanup helper
    should sit down and verify each NPC actually responds to "hi" /
    "spells" / spell name / "yes". Sample success: Lea answers all 4
    correctly after this session's fixes.
+
+---
+
+## 14. Day-15.5 — `queryDestination` engine bugs and Lua workarounds
+
+While testing as GM, the user surfaced three bugs that all trace back
+to the same routine: `Player::queryDestination` in `src/player.cpp`.
+They all manifest in different ways but the algorithm has two
+distinct flaws:
+
+### Bug A — autoStack merge with maxed-out target replaces the target
+
+`player.cpp:2727` (and the parallel container path at 2784):
+```cpp
+if (inventoryItem->equals(item) && inventoryItem->getItemCount() < 100) {
+    index = slotIndex;
+    *destItem = inventoryItem;
+    return this;
+}
+```
+
+The merge target is selected if `count < 100`. But for stackable
+runes the actual cap is `getStackMax()` which equals `it.charges`
+from items.xml (e.g., 4 for fireball, 5 for SD). A maxed-out
+4-charge fireball (4/4) is still `< 100`, so it gets returned as a
+merge target.
+
+`internalAddItem` then runs `n = min(stackMax - itemCount, m) = 0`,
+fails to merge any charges, falls into the `count == itemCount`
+branch and calls `toCylinder->addThing(index, item)`. For
+single-item slots like hands `Player::addThing` just overwrites
+`inventory[index]` — the maxed rune in hand is **replaced by a
+1-charge new rune**, losing the original.
+
+**Symptoms it caused**:
+- `/i fireball rune` while a 4/4 fireball is in hand → the hand
+  rune resets to 1 charge (the old one is lost).
+- `/i sudden death rune` repeatedly with a full main BP → SDs
+  pile up overflowing through inner BP slots, "phantom" slots
+  appear past index 20 because nested containers get pushed
+  around.
+- Casting `adori flam` with a blank rune in an inner BP → the
+  newly-conjured fireball gets routed into hand (or onto an
+  existing rune in hand), each subsequent cast replaces the hand
+  rune so the player ends up with one rune total no matter how
+  many blanks they consume.
+
+### Bug B — BFS container traversal prefers shallow siblings over deep children
+
+`player.cpp:2747-2802` builds a queue of every container reachable
+from the player's slots, processes it FIFO. When a container A is
+processed and we descend into its child container B, B is pushed to
+the END of the queue rather than processed next. So if there is
+another sibling container C also in the slot list, C is tried
+before B.
+
+**Symptoms**:
+- Player has full main BP with an inner BP inside (with space).
+  Buys 3 parcels at NPC. The 1st and 2nd land in hands, the 3rd
+  has nowhere to go — engine routes it into one of the hand
+  parcels (an empty sibling container) instead of descending into
+  the inner BP that has free slots.
+- Player has 10k crystal coins in ammo slot, full main BP +
+  inner-BP-with-space, buys 3 parcels. The displaced coins flow
+  into the new parcel that took the ammo slot rather than into
+  the inner BP.
+
+The intuitive behaviour is DFS: when a sibling is full, descend
+into its children before moving to the next sibling.
+
+### Why we did NOT patch the engine yet
+
+Both bugs are 4-6 line patches in one source file, but
+`queryDestination` runs on every item placement in the game
+(loot drops, NPC trade, manual moves, addItem calls, etc.). A
+behavioural change there has wide blast radius — could shift loot
+distribution, trade window UX, container behaviour for monsters
+that pick up items, etc.
+
+The user wants to ship gameplay fixes first and keep the engine
+binary unchanged for now (no rebuild required). So we mitigated at
+the Lua level for the two highest-impact paths.
+
+### Fix 1 — `data/talkactions/scripts/create_item.lua` (`/i` GM command)
+
+Detects rune ItemType and takes a separate code path:
+
+```lua
+if itemType:isRune() then
+    local fullCharges = math.max(1, itemType:getCharges())
+    for i = 1, runesToCreate do
+        local item = Game.createItem(itemType:getId(), fullCharges)
+        local ret = player:addItemEx(item, false, INDEX_WHEREEVER, FLAG_IGNOREAUTOSTACK)
+        if ret ~= RETURNVALUE_NOERROR then break end
+    end
+end
+```
+
+Key choices:
+- `Game.createItem(id, fullCharges)` — each `/i fireball rune`
+  produces a fresh 4/4 rune (not a 1-charge stacker), regardless
+  of how many casts came before.
+- `addItemEx(item, false, INDEX_WHEREEVER, FLAG_IGNOREAUTOSTACK)`
+  — `false` is `canDropOnMap=false` so failures don't silently
+  drop on the floor, and the flag tells `queryDestination` to
+  skip the bugged autoStack branch entirely. Each rune lands in
+  a real free slot or fails cleanly with "Not enough room.".
+- Non-rune behaviour unchanged (gold, fluids, regular items keep
+  the old `player:addItem` path).
+
+### Fix 2 — `data/spells/lib/spells.lua` (`Player:conjureItem`)
+
+The vanilla impl was `removeItem(blank) + addItem(rune)`. Both
+calls funnel through the buggy `queryDestination`. The reliable
+fix is what original Cipsoft did: transform the blank rune in
+place. Same cylinder, same slot, just new id and charges. No
+queryDestination, no addItem, no map drop.
+
+```lua
+local reagent = self:getItemById(reagentId, true)  -- deep search
+if not reagent then return ... end
+reagent:transform(conjureId, conjureCount)
+```
+
+`Item:transform` calls `Game::transformItem` which for items of
+the same `type` (rune→rune) updates id and subtype atomically in
+the same cylinder slot — exactly the behaviour spells should
+have.
+
+After this fix:
+- Cast `adori flam` with blank in inner BP → fireball appears in
+  inner BP at the blank's old slot. Hand untouched.
+- Cast again with another blank → second fireball appears in inner
+  BP. Player accumulates runes one per cast as expected.
+
+### What's still NOT fixed
+
+The parcel/crystal-coin displacement (Bug B) still affects normal
+gameplay (NPC trade, container-to-container moves). The fix
+requires the engine DFS patch:
+
+```cpp
+// in queryDestination, when pushing subContainer to the queue:
+containers.insert(containers.begin() + i + 1, subContainer);  // DFS
+// instead of:
+containers.push_back(subContainer);  // BFS (current)
+```
+
+Plus the autoStack threshold should compare against `getStackMax`
+not `100`:
+
+```cpp
+if (inventoryItem->equals(item) && inventoryItem->getItemCount() < inventoryItem->getStackMax()) {
+```
+
+Both at lines 2727 and 2784.
+
+Two patches, ~3 lines total, same file (`src/player.cpp`).
+Requires `cmake --build build --target tfs` rebuild. Open thread
+for next session if the parcel issue becomes a real player
+complaint.
