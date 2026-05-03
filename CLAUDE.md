@@ -3232,3 +3232,93 @@ The same kind of "ataque sem pzlock" abuse can come through the
 attack list (right-click creature → attack) without ever entering
 in-fight on the attacker's side if the target is far away and the
 shot misses. Not currently mitigated. Open thread if it shows up.
+
+---
+
+## 16. Day-15.7 — Block rune use via battle list (and hotkey on target)
+
+User reported that selecting a rune (e.g. SD) and clicking a player
+in the battle list still landed the rune on them. Same with binding
+a rune to a hotkey set as "Use on Target" and pressing it while
+attacking someone.
+
+Server can't differentiate "use-with-creature on map" from "use-with
+-creature via battle list" — both arrive as protocol opcode 0x84
+(ProtocolGame::parseUseWithCreature). The block has to be
+client-side, in the otc clients we ship.
+
+### Two paths to block, three clients to patch
+
+**Battle-list path** — `modules/game_interface/gameinterface.lua`,
+function `onUseWith`, branch `clickedWidget:getClassName() ==
+'UICreatureButton'`. When the selected item is a rune, surface a
+white status message and bail. Also set
+`modules.game_battle.mouseWidget.cancelNextRelease = true` so the
+battle button's own `onMouseRelease` (which calls
+`g_game.attack(creature)`) doesn't fire on the same click — the
+user was seeing both the rune blocked AND the auto-attack starting.
+
+**Hotkey path** — `modules/game_hotkeys/hotkeys_manager.lua`, branch
+`hotKey.useType == HOTKEY_MANAGER_USEONTARGET`. This bypasses
+gameinterface entirely; it calls `g_game.useWith` /
+`useInventoryItemWith` on `g_game.getAttackingCreature()`. Block the
+same way when `hotKey.itemId` is in the rune range.
+
+### The client-id gotcha
+
+First attempt used `id >= 2260 and id <= 2316` because that's the
+server-side rune range from `data/items/items.xml`. It silently did
+nothing — every test showed runes still passing through.
+
+Debug print revealed `selectedThing:getId()` returns **3155** for
+SD, not 2268. Item:getId() in OTC reads from the dat file, which is
+the *client id*, while items.xml uses the *server id* (mapped via
+items.otb).
+
+Ran `parse_otb.py` over the active items.otb to get the mapping:
+
+```
+server 2260 (blank rune)        -> client 3147
+server 2261 (destroy field)     -> client 3148
+...
+server 2268 (sudden death rune) -> client 3155
+...
+server 2316 (animate dead rune) -> client 3203
+```
+
+The runes are contiguous in both spaces, just offset by 887. Final
+range used in the patches: `id >= 3147 and id <= 3203`. Same range
+in both gameinterface.lua and hotkeys_manager.lua.
+
+### Three clients are shipped/used
+
+| Path | Repo | Branch |
+|---|---|---|
+| `Realera OT/otcv8-dev` | `lemosss/otcv8-dev` | master |
+| `Realera OT/otclientv80` | `lemosss/otclientv8` | master |
+| `OT/otclientv8` | `lemosss/otclientv8` (duplicate working copy) | master |
+
+The user's actual runtime is otcv8-dev, but the patch was applied
+to all three so any client is consistent.
+
+### To verify the patch is loaded after a Lua edit
+
+OTC doesn't auto-reload modules. Either:
+- Close `otclient_gl.exe` and reopen.
+- `Ctrl+R` in-game (sometimes breaks visuals; full restart safer).
+
+Quick console (`Ctrl+T`) sanity check:
+```lua
+print(modules.game_interface.onUseWith)
+```
+Returns `function: 0x...` if the module is loaded. To confirm the
+specific patch is active without leaving the client, drop a temp
+`print('[REALERA-DEBUG] ...')` in the branch and watch the log
+window — that's how the client-id mismatch was caught here.
+
+### Reverting
+
+Each block is ~10 lines; revert by deleting the `if id >= 3147 and
+id <= 3203 then ... return end` chunk in both files. The
+`cancelNextRelease` line is harmless to leave in — it only fires
+when the rune block fires.
