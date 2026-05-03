@@ -15,56 +15,6 @@ local voices = {
 
 npcHandler:addModule(VoiceModule:new(voices))
 
-function BeggarFirst(cid, message, keywords, parameters, node)
-	if not npcHandler:isFocused(cid) then
-		return false
-	end
-
-	local player = Player(cid)
-	if player:isPremium() then
-		if player:getStorageValue(Storage.OutfitQuest.BeggarFirstAddon) == -1 then
-			if player:getItemCount(5883) >= 100 and player:getMoney() + player:getBankBalance() >= 20000 then
-				if player:removeItem(5883, 100) and player:removeMoneyNpc(20000) then
-					npcHandler:say("Ah, right! The beggar beard or beggar dress! Here you go.", cid)
-					player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
-					player:setStorageValue(Storage.OutfitQuest.BeggarFirstAddon, 1)
-					player:addOutfitAddon(153, 1)
-					player:addOutfitAddon(157, 1)
-				end
-			else
-				npcHandler:say("You do not have all the required items.", cid)
-			end
-		else
-			npcHandler:say("It seems you already have this addon, don't you try to mock me son!", cid)
-		end
-	end
-end
-
-function BeggarSecond(cid, message, keywords, parameters, node)
-	if not npcHandler:isFocused(cid) then
-		return false
-	end
-
-	local player = Player(cid)
-	if player:isPremium() then
-		if player:getStorageValue(Storage.OutfitQuest.BeggarSecondAddon) == -1 then
-			if player:getItemCount(6107) >= 1 then
-				if player:removeItem(6107, 1) then
-					npcHandler:say("Ah, right! The beggar staff! Here you go.", cid)
-					player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
-					player:setStorageValue(Storage.OutfitQuest.BeggarSecondAddon, 1)
-					player:addOutfitAddon(153, 2)
-					player:addOutfitAddon(157, 2)
-				end
-			else
-				npcHandler:say("You do not have all the required items.", cid)
-			end
-		else
-			npcHandler:say("It seems you already have this addon, don't you try to mock me son!", cid)
-		end
-	end
-end
-
 local function creatureSayCallback(cid, type, msg)
 	if not npcHandler:isFocused(cid) then
 		return false
@@ -144,23 +94,6 @@ local function creatureSayCallback(cid, type, msg)
 	end
 	return true
 end
-
-node1 = keywordHandler:addKeyword({'addon'}, StdModule.say, {npcHandler = npcHandler, text = 'For the small fee of 20000 gold pieces I will help you mix this potion. Just bring me 100 pieces of ape fur, which are necessary to create this potion. ...Do we have a deal?'})
-node1:addChildKeyword({'yes'}, BeggarSecond, {})
-node1:addChildKeyword({'no'}, StdModule.say, {npcHandler = npcHandler, text = 'Alright then. Come back when you got all neccessary items.', reset = true})
-
-node2 = keywordHandler:addKeyword({'dress'}, StdModule.say, {npcHandler = npcHandler, text = 'For the small fee of 20000 gold pieces I will help you mix this potion. Just bring me 100 pieces of ape fur, which are necessary to create this potion. ...Do we have a deal?'})
-node2:addChildKeyword({'yes'}, BeggarFirst, {})
-node2:addChildKeyword({'no'}, StdModule.say, {npcHandler = npcHandler, text = 'Alright then. Come back when you got all neccessary items.', reset = true})
-
-node3 = keywordHandler:addKeyword({'staff'}, StdModule.say, {npcHandler = npcHandler, text = 'To get beggar staff you need to give me simon the beggar\'s staff. Do you have it with you?'})
-node3:addChildKeyword({'yes'}, BeggarSecond, {})
-node3:addChildKeyword({'no'}, StdModule.say, {npcHandler = npcHandler, text = 'Alright then. Come back when you got all neccessary items.', reset = true})
-
-node4 = keywordHandler:addKeyword({'outfit'}, StdModule.say, {npcHandler = npcHandler, text = 'For the small fee of 20000 gold pieces I will help you mix this potion. Just bring me 100 pieces of ape fur, which are necessary to create this potion. ...Do we have a deal?'})
-node4:addChildKeyword({'yes'}, BeggarFirst, {})
-node4:addChildKeyword({'no'}, StdModule.say, {npcHandler = npcHandler, text = 'Alright then. Come back when you got all neccessary items.', reset = true})
-
 
 npcHandler:setMessage(MESSAGE_GREET, "Hello |PLAYERNAME|. I am a poor man. Please help me.")
 npcHandler:setMessage(MESSAGE_FAREWELL, "Have a nice day.")

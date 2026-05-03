@@ -32,16 +32,6 @@ local function creatureSayCallback(cid, type, msg)
 			npcHandler:say("Your wish for a spectral dress is silly. Although I will grant you the permission to take one. My maidens left one in a box in a room, directly south of here.", cid)
 			player:setStorageValue(Storage.ExplorerSociety.bansheeDoor, 1)
 		end
-	elseif msgcontains(msg, "addon") then
-		if player:getStorageValue(Storage.OutfitQuest.WizardAddon) == 5 then
-			npcHandler:say("Say... I have been longing for something for an eternity now... if you help me retrieve it, I will reward you. Do you consent to this arrangement?", cid)
-			npcHandler.topic[cid] = 9
-		end
-	elseif msgcontains(msg, "orchid") or msgcontains(msg, "holy orchid") then
-		if player:getStorageValue(Storage.OutfitQuest.WizardAddon) == 6 then
-			npcHandler:say("Have you really brought me 50 holy orchids?", cid)
-			npcHandler.topic[cid] = 11
-		end
 	elseif msgcontains(msg, "yes") then
 		if npcHandler.topic[cid] == 1 then
 			if player:getStorageValue(Storage.QueenOfBansheesQuest.FourthSeal) == 1 then
@@ -100,29 +90,6 @@ local function creatureSayCallback(cid, type, msg)
 				player:setStorageValue(Storage.QueenOfBansheesQuest.Kiss, 1)
 			else
 				npcHandler:say("You have spilled too much blood recently and the dead are hungry for your soul. Perhaps return when you regained you inner balance.", cid)
-				npcHandler.topic[cid] = 0
-			end
-		elseif npcHandler.topic[cid] == 9 then
-			npcHandler:say({
-				"Listen... there are no blooming flowers down here and the only smell present is that of death and decay. ...",
-				"I wish that I could breathe the lovely smell of beautiful flowers just one more time, especially those which elves cultivate. ...",
-				"Could you please bring me 50 holy orchids?"
-			}, cid)
-			npcHandler.topic[cid] = 10
-		elseif npcHandler.topic[cid] == 10 then
-			npcHandler:say("Thank you. I will wait for your return.", cid)
-			player:setStorageValue(Storage.OutfitQuest.WizardAddon, 6)
-			npcHandler.topic[cid] = 0
-		elseif npcHandler.topic[cid] == 11 then
-			if player:removeItem(5922, 50) then
-				npcHandler:say("Thank you! You have no idea what that means to me. As promised,here is your reward... as a follower of Zathroth, I hope that you will like this accessory.", cid)
-				player:setStorageValue(Storage.OutfitQuest.WizardAddon, 7)
-				player:addOutfitAddon(145, 1)
-				player:addOutfitAddon(149, 1)
-				player:addAchievement('Warlock')
-				npcHandler.topic[cid] = 0
-			else
-				npcHandler:say("You need 50 holy orchid.", cid)
 				npcHandler.topic[cid] = 0
 			end
 		end

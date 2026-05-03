@@ -9,7 +9,6 @@ function onThink()				npcHandler:onThink()					end
 
 keywordHandler:addKeyword({'job'}, StdModule.say, {npcHandler = npcHandler, text = "Barbarians are stupid."})
 keywordHandler:addKeyword({'name'}, StdModule.say, {npcHandler = npcHandler, text = "Bronbronbronbronbron. Bronnnn!"})
-keywordHandler:addKeyword({'outfit'}, StdModule.say, {npcHandler = npcHandler, text = "Can I have free outfits?"})
 keywordHandler:addKeyword({'gelagos'}, StdModule.say, {npcHandler = npcHandler, text = "That's me."})
 keywordHandler:addKeyword({'brother'}, StdModule.say, {npcHandler = npcHandler, text = "Ajax is even more stupid."})
 keywordHandler:addKeyword({'savage'}, StdModule.say, {npcHandler = npcHandler, text = "You are as stupid as Bron."})

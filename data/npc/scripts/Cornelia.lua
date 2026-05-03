@@ -17,35 +17,6 @@ function onThink()
 	npcHandler:onThink()
 end
 
-local function creatureSayCallback(cid, type, msg)
-	if not npcHandler:isFocused(cid) then
-		return false
-	end
-
-	local player = Player(cid)
-	if isInArray({"addon", "armor"}, msg) then
-		if player:getStorageValue(1075) == 5 then
-			player:setStorageValue(1075, 6)
-			player:setStorageValue(1076, os.time() + (player:getSex() == 0 and 3600 or 7200))
-			npcHandler:say('Ah, you must be the hero Trisha talked about. I\'ll prepare the shoulder spikes for you. Please give me some time to finish.', cid)
-		elseif player:getStorageValue(1075) == 6 then
-			if player:getStorageValue(1076) > os.time() then
-				npcHandler:say('I\'m not done yet. Please be as patient as you are courageous.', cid)
-				return false
-			end
-
-			player:addOutfitAddon(142, 1)
-			player:addOutfitAddon(134, 1)
-			player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
-			player:setStorageValue(1075, 7)
-			npcHandler:say('Finished! Since you are a man, I thought you probably wanted two. Men always want that little extra status symbol. <giggles>', cid)
-		else
-			npcHandler:say('I\'m selling leather armor, chain armor, and brass armor. Ask me for a trade if you like to take a look.', cid)
-		end
-	end
-	return true
-end
-
 local shopModule = ShopModule:new()
 npcHandler:addModule(shopModule)
 
@@ -101,5 +72,4 @@ keywordHandler:addKeyword({'shield'}, StdModule.say, {npcHandler = npcHandler, o
 keywordHandler:addKeyword({'trousers'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I am selling chain legs and brass legs. What do you need?"})
 keywordHandler:addKeyword({'legs'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I am selling chain legs and brass legs. What do you need?"})
 
-npcHandler:setCallback(CALLBACK_MESSAGE_DEFAULT, creatureSayCallback)
 npcHandler:addModule(FocusModule:new())
