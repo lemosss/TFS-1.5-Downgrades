@@ -3184,3 +3184,51 @@ Smoke tests for the player.cpp patches:
 4. NPC trade — buy a stackable item that already exists in
    inventory, verify it merges with existing stack only when the
    stack has actual room (`< stackMax`), not just `< 100`.
+
+---
+
+## 15. Day-15.6 — DoT keeps in-fight alive (no PZ entry / logout while burning)
+
+User reported a player being able to walk into a depot and log out
+while still on fire from a fire field rune (`adevo grav flam`). The
+in-fight timer is just `PZ_LOCKED` (60s) and ticks down independently
+of the actual fire damage, so once 60s passed the player became
+"safe" even though they were still taking fire damage every 9s.
+
+### Fix
+
+`Player::onEndCondition` in `src/player.cpp` now refuses to clear
+`pzLocked` when `CONDITION_INFIGHT` is the condition that just ended
+and the player has any active hostile DoT. The DoT list:
+`POISON, FIRE, ENERGY, BLEEDING, DROWN, FREEZING, DAZZLED, CURSED`
+— every condition that ticks damage on a player.
+
+If any of those is active, we re-arm in-fight via
+`addInFightTicks()` for another `PZ_LOCKED` window. The next time
+in-fight expires we run the same check. Once the player stops
+burning, the next end-of-condition cleans up normally:
+`onIdleStatus + pzLocked = false + clearAttacked + skull cleanup`.
+
+`pzLocked` itself is never cleared while the player is burning, so
+both the PZ-entry check in `Tile::queryAdd` (line 571) and the
+logout check in `ProtocolGame::logout` (line 304) keep blocking.
+
+### Smoke tests
+
+1. Step on a fire field. While burning, try to walk into a depot
+   tile. Should be refused with the standard "you can't go there
+   while in fight" message.
+2. Step on a fire field. While burning, try to logout. Should be
+   refused with "You may not logout during a fight".
+3. Step on a fire field, walk away, wait 60s+ until in-fight icon
+   *should* be expiring. As long as fire is still damaging you, the
+   in-fight timer should keep refreshing.
+4. After fire condition wears off, wait another 60s — in-fight
+   should expire and you can walk into PZ / logout normally.
+
+### Note on hotkey runes & projectile attacks
+
+The same kind of "ataque sem pzlock" abuse can come through the
+attack list (right-click creature → attack) without ever entering
+in-fight on the attacker's side if the target is far away and the
+shot misses. Not currently mitigated. Open thread if it shows up.

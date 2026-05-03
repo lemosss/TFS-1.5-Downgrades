@@ -3486,6 +3486,29 @@ void Player::onEndCondition(ConditionType_t type)
 	Creature::onEndCondition(type);
 
 	if (type == CONDITION_INFIGHT) {
+		// Realera: do not let the in-fight timer expire while the player is
+		// still taking damage from a hostile DoT (fire / energy / poison /
+		// drown / freezing / dazzled / cursed / bleeding). Walking into a
+		// depot or logging out while burning was an obvious exploit. Re-arm
+		// in-fight for another PZ_LOCKED window; pzLocked stays set from
+		// the original combat hit and the next end-of-condition fires this
+		// check again.
+		bool stillBurning = false;
+		for (ConditionType_t t : { CONDITION_POISON, CONDITION_FIRE,
+		                            CONDITION_ENERGY, CONDITION_BLEEDING,
+		                            CONDITION_DROWN, CONDITION_FREEZING,
+		                            CONDITION_DAZZLED, CONDITION_CURSED }) {
+			if (hasCondition(t)) {
+				stillBurning = true;
+				break;
+			}
+		}
+		if (stillBurning) {
+			addInFightTicks();
+			sendIcons();
+			return;
+		}
+
 		onIdleStatus();
 		pzLocked = false;
 		clearAttacked();
