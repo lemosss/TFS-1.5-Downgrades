@@ -2441,3 +2441,320 @@ Git remotes pushed:
 
 **Builds**: `tfs.exe` rebuilt three times this session — for the stack-
 cap patch, the inventory swap, and the premium overflow.
+
+---
+
+## Day-14 — NPC trade audit, Malunga sorcerer teacher, GM bypass, sprite-less item purge
+
+### `/reload` talkaction registered + `logCommand` stub
+
+`data/talkactions/scripts/reload.lua` was sitting in the repo with the
+full `reloadTypes` table (actions / talkactions / npc / items / spells /
+…) but never declared in `data/talkactions/talkactions.xml`. Typing
+`/reload anything` returned "Unknown command". Added the entry next to
+`/pos`:
+
+```xml
+<talkaction words="/reload" separator=" " script="reload.lua" />
+```
+
+Once registered, the script blew up on first use:
+`attempt to call a nil value (global 'logCommand')`. Both `reload.lua`
+and `force_raid.lua` audit-log via `logCommand(player, words, param)`
+but no lib defines it. Stubbed in `data/lib/compat/compat.lua`:
+
+```lua
+function logCommand(player, words, param)
+    local name = (player and player.getName and player:getName()) or '?'
+    local line = string.format('[%s] %s: %s %s',
+        os.date('%Y-%m-%d %H:%M:%S'), name, words or '', param or '')
+    print(line)
+    local f = io.open('data/logs/commands.log', 'a')
+    if f then f:write(line, '\n'); f:close() end
+end
+```
+
+Both fixes need a server restart on first deploy because `compat.lua`
+is loaded at boot (not by `/reload`) and the broken `/reload` itself
+can't reload `/reload`. After the restart, `/reload <type>` works for
+subsequent edits.
+
+### Katana lever simplified (action 3107)
+
+`data/actions/scripts/switch/rook/katana door.lua` used to recreate a
+runtime wall at (32177, 32148, 11) every toggle to gate access — but
+the map already had a static wall there, so the engine was painting a
+door over existing geometry. Stripped the wall toggle. Lever now just
+spawns/removes a teleport at (32178, 32144, 11) → (32174, 32147, 11).
+The exit-side teleport at (32171, 32149, 11) was already in the
+.otbm.
+
+### Travel L>=50 cost gate removed
+
+Two paths in `data/npc/lib/npcsystem/modules.lua` had
+`if cost and cost > 0 and player:getLevel() >= 50 then`:
+
+- `StdModule.travel` (the one charging gold)
+- `StdModule.say` (the dialog renderer that shows the cost)
+
+A level-49 player would see "for free" but get charged silently after
+my Day-13 partial fix to `.travel` only. Removed `>= 50` from BOTH so
+the announced cost matches the deducted cost regardless of level.
+
+### `Urkalio` + `Hofech` `module_shop=1` added
+
+Both XMLs declared `shop_buyable` but missed
+`<parameter key="module_shop" value="1" />`. `parseParameters` only
+creates a `ShopModule` when that flag is non-zero, so neither NPC's
+trade window opened — saying "trade" hit the FocusModule's farewell
+fallback. One-line fix per XML.
+
+### 12 double-registered shops consolidated to Lua-only
+
+`Bashira / Carina / Chephan / Dario / Edvard / Eremo / Irea /
+Livielle / Rachel / Shanar / Shiriel / Tesha` all declared
+`module_shop=1` with a `shop_buyable` list in their XML AND a separate
+`ShopModule:new() + addBuyableItem` block in their Lua. Both modules
+push to `npcHandler.shopItems` and register a duplicate `trade`
+keyword. Functional but wasteful. Migrated each XML's items into the
+Lua (using the `Cf*` alias map from `data/npc/lib/configuration.lua`
+to deduplicate by serverId), then stripped the four shop parameters
+from each XML.
+
+**Format trap to remember**:
+`shopModule:addBuyableItem(names, itemid, cost, itemSubType, realName)`
+— the 4-arg shorthand `(names, id, price, name)` makes `itemSubType`
+the name string. `addBuyableItem` then defaults `realName` to
+`ItemType:getName()` which returns "" for items only in `items.otb`
+(no `items.xml` entry), so `shopItems` ends up with `name=""` and the
+NPC's "I'm selling X" dialog renders as `, , ,` holes. Always pass
+the 5-arg form when migrating, even if subType is meaningless: just
+use `1`.
+
+### Rachel cleanup
+
+Of the 14 lines migrated to Rachel, all 14 were post-7.72/8.0 items
+the user explicitly didn't want sold (modern potion line, three flask
+sizes, Wand of Voodoo, spellwand, talon). Removed the migrated block
+entirely. Rachel keeps her original Lua-defined offer (spellbook,
+magic lightwand, life/mana fluid + bps, wands, rods, bp_sd, bp_uh)
+and sells (vial, all wands and rods).
+
+Verified for the 13 stripped items that they have no monster drops,
+so removing them from Rachel removes them from the server entirely.
+Talon (2151) was the only would-be-removed item with monster loot,
+and Voodoo (8922) is sold by Haroun/Romir/Siflind, so neither is
+actually gone — left as-is in their other sources.
+
+### Rune charges sync across the 3 sources
+
+User-defined rune charge table:
+
+```
+Animate Dead          1 -> 2
+Envenom               5 -> 3
+Explosion             6 -> 3
+Great Fireball        4 -> 2
+Heavy Magic Missile  10 -> 5
+Magic Wall            3 -> 4
+Soulfire              5 -> 2
+```
+
+Updated three sources together so they don't drift:
+1) `data/items/items.xml` `<attribute key="charges">` — drives
+   `Item::getStackMax()` (the per-rune stack cap from Day-13).
+2) `data/spells/spells.xml` `<rune charges="N">` for spell info display.
+3) `data/spells/scripts/conjuring/*.lua` — the count argument of
+   `creature:conjureItem(reagent, conjureId, count)`.
+
+Frost Magic Missile (`adori glaci`) was in the user's reference list
+but has no `<instant>/<rune>/script` in this server's spells.xml — left
+out of the sync.
+
+### `config.lua` rate edits (gitignored, per-instance)
+
+- `rateExp = 1`, `rateSkill = 1`, `rateLoot = 1`, `rateMagic = 1`
+- `experienceStages = { {minlevel = 1, multiplier = 1} }` (collapsed
+  the 5-stage Realera staircase to a single 1x band so the
+  `rateExp` number alone controls XP)
+- `maxMessageBuffer = 4 -> 8`
+
+`config.lua` is gitignored. Re-apply per instance.
+
+### GM bypass on six quest-gated NPCs
+
+`Alesar / Hairycles / Haroun / Nah'Bob / Rashid / Yaman` each have a
+`local function onTradeRequest(cid)` callback (registered via
+`CALLBACK_ONTRADEREQUEST`) that returns false unless the player has a
+specific quest storage value. ADM Lemos can't open the trade window
+without doing the quest. Patched the callback to short-circuit on GM
+access:
+
+```lua
+local _gmPlayer = Player(cid)
+if _gmPlayer and _gmPlayer:getGroup() and _gmPlayer:getGroup():getAccess() then
+    return true
+end
+-- existing storage check stays unchanged below
+```
+
+**Pitfall** — first patch attempt used Python's `re.sub` with
+`'\\1...'` as a regular triple-quoted string. `\\1` parsed by Python
+becomes `\1` which is the literal byte `0x01` — NOT the regex group
+backreference. Replacement scrubbed the `local function
+onTradeRequest(cid)` line and inserted a control character, breaking
+the entire script load. NPCs went silent (no greet, no anything)
+until git-checkout + re-patch with `r'\1...'` (raw string).
+
+### 4 spawnless NPCs moved to `data/npc/deadfiles/` (3 ended up there)
+
+- `Jessica1` — duplicate of Jessica, no spawn entry
+- `Alesar1` — duplicate of Alesar, no spawn
+- `Captain HabaOpenSea` — no spawn
+- `Nah'bob` — moved here briefly, then **restored** (see below)
+
+The Nah'bob move was a mistake. My Python spawn check used a
+case-sensitive grep for `name="Nah'bob"` (lowercase b) which missed
+the actual spawn entries that use `name="Nah'Bob"` (capital B).
+Server boot started yelling
+`[Error - Npc::loadFromXml] Failed to load data/npc/Nah'Bob.xml`
+on the spawner. Moved the XML back to `data/npc/Nah'Bob.xml`. Lesson:
+**spawn name lookups must be case-insensitive** — Tibia map names
+have inconsistent casing (`Nah'Bob` vs `Mr. West` vs `Siflind` typo
+for `Silfind`).
+
+### NPC walkaway "Good bye, -1." — Lua scope bug fix
+
+User report: Tothdral and other NPCs greeted with the player's name
+but walkaway messages showed `Good bye, -1.`. Bug at
+`data/npc/lib/npcsystem/npchandler.lua` line 494:
+
+```lua
+local player = Player(cid)
+if player then
+    local playerName = player:getName()
+    -- ...
+else
+    playerName = -1
+end
+
+local parseInfo = { [TAG_PLAYERNAME] = playerName }
+```
+
+`local playerName = player:getName()` is declared INSIDE the `if`
+block, so its scope ends at the matching `end`. The `parseInfo` line
+references a GLOBAL `playerName` that's only set in the `else`
+branch (-1) or by some prior unrelated NPC's invocation. So the
+`else` value -1 leaks across NPC interactions for any subsequent
+walkaway message. Fixed by declaring `local playerName = -1` above
+the if/else:
+
+```lua
+local playerName = -1
+if player then
+    local n = player:getName()
+    if n then playerName = n end
+end
+local parseInfo = { [TAG_PLAYERNAME] = playerName }
+```
+
+This file is shared by all NPCs, so the fix is global.
+
+### Malunga converted to Sorcerer Guild Leader (spell teacher)
+
+The user noticed Malunga's trade window had 38 quest items, **0 of
+them dropped from any monster** in this server, all 38 had
+`clientId=0` in items.otb (no sprite). Pure dead inventory — players
+visiting her saw an empty/broken trade. Converted her into a
+sorcerer-only spell teacher (Liberty Bay):
+
+- Stripped `module_shop=1` and the `shop_sellable` list from
+  `data/npc/Malunga.xml`.
+- Rewrote `data/npc/scripts/Malunga.lua` Gregor-style with a `teach`
+  helper that wires `keywordHandler:addKeyword({name})` to
+  `StdModule.say` ("Would you like to learn X for N gold?") plus
+  `yes`/`no` children. `yes` calls `StdModule.learnSpell` with
+  `vocation = 1` (sorcerer; master sorcerer is implicit via vocation
+  inheritance).
+- Hooked all 46 sorcerer-only `<instant>` spells from `spells.xml`
+  with Cipsoft 8.0 reference prices (Light free, Find Person 80,
+  Light Healing 170, Magic Shield 450, Great Fireball 1200, Magic
+  Wall 1900, Sudden Death 3000, Ultimate Explosion 5000).
+
+**Trap**: first version used the spell incantation (`exura vita`,
+`adori flam`) as the keyword, but players type the spell NAME
+(`ultimate healing`, `fireball`). Fixed by using
+`string.lower(name)` as the primary keyword and adding the
+incantation as an `addAliasKeyword` so both forms work.
+
+### Bulk-remove sprite-less items from 47 NPC shops
+
+User asked to clean every NPC's inventory of items that don't render
+in 8.0. Heuristic: an item is sprite-less if its `items.otb` clientId
+is `0` AND it has no `<item>` entry in `items.xml`. Walked all NPC
+Lua scripts (resolving `Cf*` aliases) and XML `shop_buyable` /
+`shop_sellable` / `shop_buyable_containers` parameters; dropped any
+matching line/entry. Total: 4 Lua lines + 296 XML entries removed
+across 47 NPCs.
+
+Heaviest casualties:
+- `Rashid` -79 (the wandering trader's entire post-8.0 buyback list)
+- `Tothdral` -12, `Topsy` -12, `Siflind` -17, `Romir` -14
+- 9 furniture sellers (Eddy/Hofech/Janz/Nydala/Ukea/Vera/Yoem/Peggy/
+  Gamon) -6 to -7 each (8.5+ bed kits, chimney, trophy stand)
+- 5 gem sellers (Briasol/Chantalle/hanna/Tezila/Jessica) -8 each
+- Cedrik / Robert / Dario - special arrows + 8.5 bolts
+
+After this pass, NPC trade windows render cleanly — every item shown
+has a real client sprite. Gameplay impact: players can no longer farm
+post-8.0 loot to vendor at Rashid (he was buying 79 items that don't
+exist in the world anyway, since 0 monsters dropped them — net
+neutral).
+
+### Day-14 file index
+
+Server (this repo):
+- `data/talkactions/talkactions.xml` — register `/reload`
+- `data/lib/compat/compat.lua` — `logCommand` stub
+- `data/actions/scripts/switch/rook/katana door.lua` — lever
+  simplified
+- `data/npc/lib/npcsystem/modules.lua` — drop L>=50 gate
+- `data/npc/lib/npcsystem/npchandler.lua` — walkaway -1 fix
+- `data/npc/Urkalio.xml` + `data/npc/Hofech.xml` — module_shop=1
+- 12 consolidated NPCs (XML + Lua pairs)
+- `data/npc/scripts/Rachel.lua` — migrated block stripped
+- `data/npc/Malunga.xml` + `data/npc/scripts/Malunga.lua` — sorcerer
+  spell teacher
+- `data/items/items.xml`, `data/spells/spells.xml`,
+  `data/spells/scripts/conjuring/*.lua` — rune charges sync
+- 6 NPC Lua scripts — GM bypass (Alesar / Hairycles / Haroun /
+  Nah'Bob / Rashid / Yaman)
+- 4 NPCs moved to `data/npc/deadfiles/` (Jessica1, Alesar1,
+  Captain HabaOpenSea, [Nah'Bob restored])
+- 47 NPC shops cleaned (XML and/or Lua)
+
+`config.lua` (gitignored, NOT committed):
+- `rateExp/Skill/Loot/Magic = 1`, single-band experienceStages,
+  maxMessageBuffer = 8
+
+### Open thread — vocation spell teachers
+
+Server has `needlearn="0"` on 73 spells and `needlearn="1"` on 40
+(default = "0", auto-learn). User wants every spell to require
+NPC-buy (Cipsoft 8.0 model). Pending tasks for next session:
+1) Flip every `needlearn` to `1` (or set the default in spells.xml
+   parser). Need to verify which spells should remain auto-learned
+   (probably none for vocation spells; some script-only utility
+   spells maybe).
+2) Pick canonical 8.0 NPC teachers for each vocation:
+   - **Sorcerer** — `Malunga` already setup (Day-14). Add `Lea`
+     (Thais) and `Muriel` (Thais) for redundancy.
+   - **Druid** — convert `Hjaern` (Carlin) and `Padreia` (Carlin),
+     `Maealil` (Ab'Dendriel), `Chondur` (Liberty Bay).
+   - **Paladin** — convert `Elane` (Ab'Dendriel) and `Razan` (Edron).
+     Both currently exist as shop/addon NPCs; replace inventory.
+   - **Knight** — `Gregor` (Ab'Dendriel) already a teacher; add
+     `Ulrik` (Kazordoon) and `Niccolai` (Thais — needs creation).
+3) Use the same `teach(name, words, price, level)` helper pattern
+   from Malunga, customize per vocation. Spell prices from Tibia
+   wiki 8.0 reference.
