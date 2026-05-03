@@ -48,6 +48,10 @@ local function creatureSayCallback(cid, type, msg)
 end
 
 local function onTradeRequest(cid)
+	local _gmPlayer = Player(cid)
+	if _gmPlayer and _gmPlayer:getGroup() and _gmPlayer:getGroup():getAccess() then
+		return true
+	end
 	local player = Player(cid)
 	if player:getStorageValue(Storage.DjinnWar.MaridFaction.Mission03) ~= 3 then
 		npcHandler:say('I\'m sorry, human. But you need Gabel\'s permission to trade with me.', cid)
