@@ -3128,29 +3128,59 @@ After this fix:
 - Cast again with another blank → second fireball appears in inner
   BP. Player accumulates runes one per cast as expected.
 
-### What's still NOT fixed
+### Engine patches landed (Day-15.5 follow-up)
 
-The parcel/crystal-coin displacement (Bug B) still affects normal
-gameplay (NPC trade, container-to-container moves). The fix
-requires the engine DFS patch:
+After confirming the Lua workarounds worked, both queryDestination
+fixes were applied in `src/player.cpp` and the binary rebuilt.
 
+**Patch 1 — autoStack threshold (lines 2732 and 2797)**:
 ```cpp
-// in queryDestination, when pushing subContainer to the queue:
-containers.insert(containers.begin() + i + 1, subContainer);  // DFS
-// instead of:
-containers.push_back(subContainer);  // BFS (current)
-```
-
-Plus the autoStack threshold should compare against `getStackMax`
-not `100`:
-
-```cpp
+// before:
+if (inventoryItem->equals(item) && inventoryItem->getItemCount() < 100) {
+// after:
 if (inventoryItem->equals(item) && inventoryItem->getItemCount() < inventoryItem->getStackMax()) {
 ```
+Same change at line 2797 with `tmpItem`. Compares against the
+target's actual stack cap (`charges` for runes), not a hard-coded
+100. Maxed-out 4/4 fireball is no longer selected as a merge
+target, so internalAddItem can't fall into the addThing-replace
+branch and overwrite the existing rune.
 
-Both at lines 2727 and 2784.
+**Patch 2 — BFS → DFS (container processing loop, lines 2752-2806)**:
+Introduced an `insertPos` tracker. When descending into
+`tmpContainer` and finding child containers, they are inserted at
+position `i+1` (right after current) rather than appended at the
+end:
+```cpp
+size_t insertPos = i; // i has already advanced past current
+...
+if (Container* subContainer = ...) {
+    containers.insert(containers.begin() + insertPos, subContainer);
+    ++insertPos;
+}
+```
+Done in both the non-stackable path (line 2776) and the stackable
+path (line 2804). This makes queryDestination DFS so a displaced
+item descends into existing inner containers before considering
+newly-equipped sibling containers (parcels, etc.).
 
-Two patches, ~3 lines total, same file (`src/player.cpp`).
-Requires `cmake --build build --target tfs` rebuild. Open thread
-for next session if the parcel issue becomes a real player
-complaint.
+Lua workarounds in spells.lua and create_item.lua are still in
+place — they're harmless overlays now that the engine is fixed,
+and they keep things robust if the binary ever gets reverted.
+
+### Things to test after the engine rebuild
+
+Smoke tests for the player.cpp patches:
+1. Have a 4/4 fireball in hand. Pick up another fireball stack
+   from an NPC or `/i fireball rune`. Verify the hand rune is NOT
+   replaced — a separate stack should appear elsewhere or the
+   pickup should fail cleanly.
+2. Full main BP with an inner BP (with space). Buy 3 parcels.
+   Verify the 3rd parcel descends into the inner BP, not into
+   the parcel just placed in another slot.
+3. 10k crystal coins in ammo slot, full main BP + inner BP space.
+   Buy 3 parcels. Verify the displaced coins land in the inner BP,
+   not in the new parcel.
+4. NPC trade — buy a stackable item that already exists in
+   inventory, verify it merges with existing stack only when the
+   stack has actual room (`< stackMax`), not just `< 100`.

@@ -2724,7 +2724,12 @@ Cylinder* Player::queryDestination(int32_t& index, const Thing& thing, Item** de
 				if (autoStack && isStackable) {
 					//try find an already existing item to stack with
 					if (queryAdd(slotIndex, *item, item->getItemCount(), 0) == RETURNVALUE_NOERROR) {
-						if (inventoryItem->equals(item) && inventoryItem->getItemCount() < 100) {
+						// Compare against the target's actual stack cap (e.g.
+						// `charges` for stackable runes), not a hard-coded 100.
+						// A maxed-out 4/4 fireball still passes <100 otherwise,
+						// gets returned as merge target, then internalAddItem's
+						// addThing() fallback overwrites it with the new item.
+						if (inventoryItem->equals(item) && inventoryItem->getItemCount() < inventoryItem->getStackMax()) {
 							index = slotIndex;
 							*destItem = inventoryItem;
 							return this;
@@ -2744,9 +2749,15 @@ Cylinder* Player::queryDestination(int32_t& index, const Thing& thing, Item** de
 			}
 		}
 
+		// DFS traversal: when descending into `tmpContainer`, child containers
+		// found inside are inserted RIGHT AFTER the current position so they
+		// get processed before the next sibling. The original BFS push_back
+		// would route a displaced item into a newly-equipped sibling parcel
+		// instead of the inner backpack with actual free space.
 		size_t i = 0;
 		while (i < containers.size()) {
 			Container* tmpContainer = containers[i++];
+			size_t insertPos = i; // i has already advanced past current; subcontainers go here
 			if (!autoStack || !isStackable) {
 				//we need to find first empty container as fast as we can for non-stackable items
 				uint32_t n = tmpContainer->capacity() - std::min(tmpContainer->capacity(), static_cast<uint32_t>(tmpContainer->size()));
@@ -2762,7 +2773,8 @@ Cylinder* Player::queryDestination(int32_t& index, const Thing& thing, Item** de
 
 				for (Item* tmpContainerItem : tmpContainer->getItemList()) {
 					if (Container* subContainer = tmpContainerItem->getContainer()) {
-						containers.push_back(subContainer);
+						containers.insert(containers.begin() + insertPos, subContainer);
+						++insertPos;
 					}
 				}
 
@@ -2780,15 +2792,17 @@ Cylinder* Player::queryDestination(int32_t& index, const Thing& thing, Item** de
 					continue;
 				}
 
-				//try find an already existing item to stack with
-				if (tmpItem->equals(item) && tmpItem->getItemCount() < 100) {
+				//try find an already existing item to stack with — same getStackMax
+				//fix as the slot-loop above
+				if (tmpItem->equals(item) && tmpItem->getItemCount() < tmpItem->getStackMax()) {
 					index = n;
 					*destItem = tmpItem;
 					return tmpContainer;
 				}
 
 				if (Container* subContainer = tmpItem->getContainer()) {
-					containers.push_back(subContainer);
+					containers.insert(containers.begin() + insertPos, subContainer);
+					++insertPos;
 				}
 
 				n++;
