@@ -23,10 +23,7 @@
 			jug, 7244, 10;
 			machete, 2420, 35;
 			mug, 2012, 4, 0;
-			orange backpack, 10519, 20;
-			orange bag, 10520, 5;
 			parchment, 1948, 8;
-			parchment, 7535, 8;
 			pick, 2553, 50;
 			plate, 2035, 6;
 			present, 1990, 10;
@@ -37,7 +34,7 @@
 			torch, 2050, 2;
 			valentine's card, 6538, 30;
 			watch, 2036, 20;
-			worm, 3976, 1 " />
+			worm, 3976, 1 ;" />
 		<parameter key="shop_sellable" value="
 			green book, 1980, 15;
 			orange book, 1977, 30;
@@ -48,12 +45,11 @@
 			fishing rod, 2580, 40;
 			inkwell, 2600, 8;
 			machete, 2420, 6;
-			parchment, 7696, 5;
 			pick, 2553, 15;
 			rope, 2120, 15;
 			scythe, 2550, 10;
 			shovel, 2554,8;
 			watch, 2036, 6;
-			wooden hammer, 2556, 15" />
+			wooden hammer, 2556, 15;" />
 	</parameters>
 </npc>

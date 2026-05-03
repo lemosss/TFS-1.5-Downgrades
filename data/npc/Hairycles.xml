@@ -10,6 +10,6 @@
 		<parameter key="shop_buyable" value="
 			monkey statue 'see' kit, 5086, 65;
 			monkey statue 'hear' kit, 5087, 65;
-			monkey statue 'speak' kit, 5088, 65" />
+			monkey statue 'speak' kit, 5088, 65;" />
 	</parameters>
 </npc>

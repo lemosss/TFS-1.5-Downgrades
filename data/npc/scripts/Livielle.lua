@@ -23,7 +23,6 @@ shopModule:addBuyableItem({'juice squeezer'}, 5865, 100, 1,'juice squeezer')
 shopModule:addBuyableItem({'mango'}, 5097, 10, 1,'mango')
 shopModule:addBuyableItem({'melon'}, 2682, 10, 1,'melon')
 shopModule:addBuyableItem({'orange'}, 2675, 10, 1,'orange')
-shopModule:addBuyableItem({'potatoe'}, 8838, 4, 1,'potatoe')
 shopModule:addBuyableItem({'pumpkin'}, 2683, 10, 1,'pumpkin')
 shopModule:addBuyableItem({'strawberry'}, 2680, 2, 1,'strawberry')
 shopModule:addBuyableItem({'white mushroom'}, 2787, 10, 1,'white mushroom')
@@ -32,6 +31,5 @@ shopModule:addBuyableItem({'sample of venorean spice'}, 4849, 200, 1,'sample of 
 
 -- migrated from XML shop_buyable/shop_sellable
 shopModule:addBuyableItem({'bottle of milk'}, 2007, 15, 6, 'bottle of milk')
-shopModule:addBuyableItem({'sample of venorean spice'}, 9675, 200, 1, 'sample of venorean spice')
 
 npcHandler:addModule(FocusModule:new())

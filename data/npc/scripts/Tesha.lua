@@ -77,9 +77,6 @@ keywordHandler:addKeyword({'talon'}, StdModule.say, {npcHandler = npcHandler, on
 shopModule:addBuyableItem({'bronze goblet'}, 5807, 2000, 1, 'bronze goblet')
 shopModule:addBuyableItem({'golden goblet'}, 5805, 5000, 1, 'golden goblet')
 shopModule:addBuyableItem({'silver goblet'}, 5806, 3000, 1, 'silver goblet')
-shopModule:addSellableItem({'green giant shimmering pearl'}, 7632, 3000, 'green giant shimmering pearl')
-shopModule:addSellableItem({'brown giant shimmering pearl'}, 7633, 3000, 'brown giant shimmering pearl')
-shopModule:addSellableItem({'gold ingot'}, 9971, 5000, 'gold ingot')
 shopModule:addSellableItem({'golden figurine'}, 5799, 3000, 'golden figurine')
 shopModule:addSellableItem({'scarab coin'}, 2159, 100, 'scarab coin')
 
