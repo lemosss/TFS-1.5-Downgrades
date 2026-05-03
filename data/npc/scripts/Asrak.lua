@@ -44,4 +44,9 @@ keywordHandler:addKeyword({'weapon'}, StdModule.say, {npcHandler = npcHandler, o
 keywordHandler:addKeyword({'armor'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Courage is the only armor that shields you against rage and fear, the greatest dangers you will have to face."})
 keywordHandler:addKeyword({'shield'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Your confidence shall be your shield. Nothing can penetrate that defence. No emotion will let you lose your focus."})
 
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 4, Spellbook.knight)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach knight {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())

@@ -26,10 +26,10 @@ local function greetCallback(cid, message)
 		npcHandler:setMessage(MESSAGE_GREET, {
 			'Whoa? You know the word! Amazing, |PLAYERNAME|! ...',
 			'I should go and tell Fa\'hradin. ...',
-			'Well. Why are you here anyway, |PLAYERNAME|?'
+			'Well. Why are you here anyway, |PLAYERNAME|? I teach paladin {spells}.'
 		})
 	else
-		npcHandler:setMessage(MESSAGE_GREET, '|PLAYERNAME|! How\'s it going these days? What brings you {here}?')
+		npcHandler:setMessage(MESSAGE_GREET, '|PLAYERNAME|! How\'s it going these days? I teach paladin {spells}. What would you like to learn?')
 	end
 	return true
 end
@@ -108,3 +108,7 @@ focusModule:addGreetMessage('hi')
 focusModule:addGreetMessage('hello')
 focusModule:addGreetMessage('djanni\'hah')
 npcHandler:addModule(focusModule)
+
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 3, Spellbook.paladin)
+npcHandler:addModule(FocusModule:new())

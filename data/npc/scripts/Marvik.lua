@@ -47,12 +47,15 @@ keywordHandler:addKeyword({'wand'}, StdModule.say, {npcHandler = npcHandler, onl
 
 local function greetCallback(cid)
 	if Player(cid):isDruid() then
-		npcHandler:setMessage(MESSAGE_GREET, "Nice to see you again, |PLAYERNAME|!")
+		npcHandler:setMessage(MESSAGE_GREET, "Nice to see you again, |PLAYERNAME|. I teach druid {spells}. What would you like to learn?")
 	else
-		npcHandler:setMessage(MESSAGE_GREET, "Welcome to my cave, |PLAYERNAME|! How may I help you?")
+		npcHandler:setMessage(MESSAGE_GREET, "Welcome to my cave, |PLAYERNAME|. I teach druid {spells}. What would you like to learn?")
 	end
 	return true
 end
 
 npcHandler:setCallback(CALLBACK_GREET, greetCallback)
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
+
 npcHandler:addModule(FocusModule:new())

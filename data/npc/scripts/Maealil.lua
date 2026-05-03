@@ -93,7 +93,7 @@ keywordHandler:addAliasKeyword({'spark'})
 keywordHandler:addKeyword({'solitude'}, StdModule.say, {npcHandler = npcHandler, text = 'Talk to the hermit Eremo on the isle of Cormaya about this blessing.'})
 keywordHandler:addAliasKeyword({'wisdom'})
 
-npcHandler:setMessage(MESSAGE_GREET, 'Welcome, young |PLAYERNAME|! If you are heavily wounded or poisoned, I can {heal} you for free.')
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach druid {spells}. What would you like to learn?")
 npcHandler:setMessage(MESSAGE_WALKAWAY, 'Remember: If you are heavily wounded or poisoned, I can heal you for free.')
 npcHandler:setMessage(MESSAGE_FAREWELL, 'May the gods bless you, |PLAYERNAME|!')
 
@@ -101,3 +101,7 @@ local focusModule = FocusModule:new()
 focusModule:addGreetMessage({'hi', 'hello', 'ashari'})
 focusModule:addFarewellMessage({'bye', 'farewell', 'asgha thrazi'})
 npcHandler:addModule(focusModule)
+
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
+npcHandler:addModule(FocusModule:new())

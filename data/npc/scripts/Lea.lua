@@ -20,4 +20,9 @@ keywordHandler:addKeyword({'spellbook'}, StdModule.say, {npcHandler = npcHandler
 keywordHandler:addKeyword({'wand'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I'm sorry, I'm not having any of those anymore, but please ask Rachel downstairs, I think she got some."})
 keywordHandler:addKeyword({'rod'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I'm sorry, I'm not having any of those anymore, but please ask Rachel downstairs, I think she got some."})
 
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 1, Spellbook.sorcerer)
+
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach sorcerer {spells}. What would you like to learn?")
+
 npcHandler:addModule(FocusModule:new())

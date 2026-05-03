@@ -34,38 +34,9 @@ keywordHandler:addKeyword({'lizard'}, StdModule.say, {npcHandler = npcHandler, o
 keywordHandler:addKeyword({'dworc'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "Given that the orcish race is able to reproduce itself with all kinds of different humanoid creatures, it is indeed a probability that the dworcs are some crossbreed as one could assume from their name."})
 keywordHandler:addKeyword({'syrup'}, StdModule.say, {npcHandler = npcHandler, onlyFocus = true, text = "I had some cough syrup a while ago. It was stolen in an ape raid. I fear if you want more cough syrup you will have to buy it in the druids guild in carlin."})
 
-local function creatureSayCallback(cid, type, msg)
-	if not npcHandler:isFocused(cid) then
-		return false
-	end
+-- Spellbook (auto-generated): teach all spells of this NPC vocation
+Spellbook.teach(npcHandler, keywordHandler, 2, Spellbook.druid)
 
-	local player = Player(cid)
-	if msgcontains(msg, "addon") then
-		if player:getStorageValue(1048) < 1 then
-			npcHandler:say("Would you like to wear bear paws like I do? No problem, just bring me 50 bear paws and 50 wolf paws and I'll fit them on.", cid)
-			player:setStorageValue(1048, 1)
-			npcHandler.topic[cid] = 0
-		end
-	elseif msgcontains(msg, "paws") then
-		if player:getStorageValue(1048) == 1 then
-			npcHandler:say("Have you brought 50 bear paws and 50 wolf paws?", cid)
-			npcHandler.topic[cid] = 1
-		end
-	elseif msgcontains(msg, "yes") then
-		if npcHandler.topic[cid] == 1 then
-			if player:removeItem(5896, 50) and player:removeItem(5897, 50) then
-				npcHandler:say("Excellent! Like promised, here are your bear paws.", cid)
-				player:setStorageValue(1048, 2)
-				player:addOutfitAddon(148, 1)
-				player:addOutfitAddon(144, 1)
-				npcHandler.topic[cid] = 0
-			else
-				npcHandler:say("You dont have the items.", cid)
-			end
-		end
-	end
-	return true
-end
+npcHandler:setMessage(MESSAGE_GREET, "Greetings, |PLAYERNAME|. I teach druid {spells} and {trade} a few items. What would you like?")
 
-npcHandler:setCallback(CALLBACK_MESSAGE_DEFAULT, creatureSayCallback)
 npcHandler:addModule(FocusModule:new())

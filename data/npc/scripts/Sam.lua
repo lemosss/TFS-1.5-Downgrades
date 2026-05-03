@@ -16,34 +16,7 @@ local function creatureSayCallback(cid, type, msg)
 	end
 
 	local player = Player(cid)
-	if msgcontains(msg, 'adorn')
-			or msgcontains(msg, 'outfit')
-			or msgcontains(msg, 'addon') then
-		local addonProgress = player:getStorageValue(Storage.OutfitQuest.Knight.AddonHelmet)
-		if addonProgress == 5 then
-			player:setStorageValue(Storage.OutfitQuest.Knight.MissionHelmet, 6)
-			player:setStorageValue(Storage.OutfitQuest.Knight.AddonHelmet, 6)
-			player:setStorageValue(Storage.OutfitQuest.Knight.AddonHelmetTimer, os.time() + 7200)
-			npcHandler:say('Oh, Gregor sent you? I see. It will be my pleasure to adorn your helmet. Please give me some time to finish it.', cid)
-		elseif addonProgress == 6 then
-			if player:getStorageValue(Storage.OutfitQuest.Knight.AddonHelmetTimer) < os.time() then
-				player:setStorageValue(Storage.OutfitQuest.Knight.MissionHelmet, 0)
-				player:setStorageValue(Storage.OutfitQuest.Knight.AddonHelmet, 7)
-				player:setStorageValue(Storage.OutfitQuest.Ref, math.min(0, player:getStorageValue(Storage.OutfitQuest.Ref) - 1))
-				player:addOutfitAddon(131, 2)
-				player:addOutfitAddon(139, 2)
-				player:getPosition():sendMagicEffect(CONST_ME_MAGIC_BLUE)
-				npcHandler:say('Just in time, |PLAYERNAME|. Your helmet is finished, I hope you like it.', cid)
-			else
-				npcHandler:say('Please have some patience, |PLAYERNAME|. Forging is hard work!', cid)
-			end
-		elseif addonProgress == 7 then
-			npcHandler:say('I think it\'s one of my masterpieces.', cid)
-		else
-			npcHandler:say('Sorry, but without the permission of Gregor I cannot help you with this matter.', cid)
-		end
-
-	elseif msgcontains(msg, "old backpack") or msgcontains(msg, "backpack") then
+	if msgcontains(msg, "old backpack") or msgcontains(msg, "backpack") then
 		if player:getStorageValue(Storage.SamsOldBackpack) < 1 then
 			npcHandler:say("What? Are you telling me you found my old adventurer's backpack that I lost years ago??", cid)
 			npcHandler.topic[cid] = 1
@@ -116,4 +89,5 @@ npcHandler:setMessage(MESSAGE_FAREWELL, "Good bye and come again, |PLAYERNAME|."
 npcHandler:setMessage(MESSAGE_WALKAWAY, "Good bye and come again.")
 
 npcHandler:setCallback(CALLBACK_MESSAGE_DEFAULT, creatureSayCallback)
+
 npcHandler:addModule(FocusModule:new())
