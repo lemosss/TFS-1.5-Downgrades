@@ -2758,3 +2758,238 @@ NPC-buy (Cipsoft 8.0 model). Pending tasks for next session:
 3) Use the same `teach(name, words, price, level)` helper pattern
    from Malunga, customize per vocation. Spell prices from Tibia
    wiki 8.0 reference.
+
+---
+
+## 13. Day-15 — Spellbook lib + addon dialog purge
+
+### Big picture
+
+Two intertwined cleanups happened in one session:
+
+1. **Spell teacher network**: 29 NPCs across the 4 vocations now sell
+   every spell of their vocation (Cipsoft 8.0 prices, level gates),
+   driven by a shared library (`data/npc/lib/spellbook.lua`). All 117
+   instant spells in `data/spells/spells.xml` were flipped to
+   `needlearn="1"` so they MUST be bought from an NPC.
+2. **Addon/outfit dialog purge**: 37 NPCs that offered Tibia 8.6+
+   addon quests had that dialog stripped — Realera doesn't grant
+   custom outfits or addons; the player picks any outfit/addon on
+   character creation. Non-addon dialog (other quests, shops, voice,
+   chat keywords) was preserved on each NPC.
+
+Plus: Cassino moved to deadfiles (gambling NPC, not used).
+
+### Spellbook library — `data/npc/lib/spellbook.lua`
+
+New file. Single shared catalog of every learnable spell per vocation
+with Cipsoft 8.0 reference prices. Each NPC who teaches spells just
+calls:
+
+```lua
+Spellbook.teach(npcHandler, keywordHandler, vocId, Spellbook.<voc>)
+```
+
+Vocation IDs: `1=sorc, 2=druid, 3=pal, 4=knight`. Promoted IDs (5-8)
+inherit automatically via TFS `learnSpell`.
+
+Catalog format per entry: `{name, words, price, level}` — e.g.
+`{'Fireball', 'adori flam', 1200, 27}`. Prices and levels match the
+8.0 wiki reference. The catalog is sorted by name length DESC before
+keyword registration so longer names register first (otherwise
+`great fireball` would substring-match `fireball`).
+
+`Spellbook.teach` registers, per spell:
+- A keyword node on the spell name (`fireball`)
+- An alias on the incantation (`adori flam`) when it differs
+- `yes` / `no` child keywords for the buy flow
+
+Plus a single generic `spells` help keyword per NPC (vocation-aware
+text with 4 example spell names that render as clickable
+`{spell name}` links). For hybrid teachers (Eroth, Rahkem teach
+sorc + druid via two `Spellbook.teach` calls), the help text
+auto-extends to "all sorcerer and druid spells".
+
+The lib is auto-loaded from `data/npc/lib/npc.lua`:
+```lua
+dofile('data/npc/lib/spellbook.lua')
+```
+
+**To revert the whole spell teacher network**: delete
+`data/npc/lib/spellbook.lua` + the dofile line, then `git checkout`
+each of the 29 spell teacher scripts back to before this session.
+Spells without `needlearn="1"` would also need restoring in
+`spells.xml` (33 lines flipped).
+
+### Spell teacher NPCs (29) — explicit greet + Spellbook.teach
+
+Each spell teacher's greet is now explicit so the player knows they
+teach spells without having to guess the keyword:
+
+> *"Greetings, |PLAYERNAME|. I teach &lt;voc&gt; {spells}. What would you
+> like to learn?"*
+
+For 5 NPCs that ALSO have a shop (XML `module_shop="1"`), the greet
+mentions both:
+
+> *"...I teach &lt;voc&gt; {spells} and {trade} a few items..."*
+
+For NPCs with a `greetCallback` (dynamic per-player greet — Duria,
+Etzel, Marvik, Muriel, Umar), the dynamic message itself was
+modified to include the spell mention.
+
+| NPC | Vocation | City | Has shop? |
+|---|---|---|---|
+| Asrak | knight | ? | no |
+| Chatterbone | sorcerer | ? | no |
+| Chondur | druid | Liberty Bay | YES |
+| Duria | knight | Kazordoon | no |
+| Elane | paladin | Ab'Dendriel | YES |
+| Eroth | sorc + druid | hybrid | no |
+| Etzel | sorcerer | Kazordoon | no |
+| Gregor | knight | Ab'Dendriel | no |
+| Gundralph | druid | ? | no |
+| Hagor | paladin | ? | no |
+| Hjaern | druid | Nibelor | no |
+| Lea | sorcerer | Carlin | no |
+| Legola | paladin | Carlin | (empty) |
+| Lungelen | sorcerer | ? | no |
+| Maealil | druid | Ab'Dendriel | no |
+| Malunga | sorcerer | Liberty Bay | no |
+| Marvik | druid | Thais | no |
+| Muriel | sorcerer | Thais | no |
+| Padreia | druid | Carlin | no |
+| Rahkem | sorc + druid | Darashia | no |
+| Razan | paladin | Edron | no |
+| Shalmar | druid | ? | no |
+| Smiley | druid | ? | no |
+| Thorwulf | knight | ? | no |
+| Trisha | knight | Carlin | no |
+| Umar | paladin | (Marid djinn) | no |
+| Ulrik | knight | Kazordoon | YES |
+| Ustan | druid | Port Hope | YES |
+| Sam | knight | Thais | YES (shop only — see below) |
+
+**Reverted from spell teaching mid-session** — these were given
+`Spellbook.teach` by my prior automation but in real Cipsoft 8.0 they
+are NOT teachers (just shop NPCs); user explicitly asked to revert:
+- **Gorn** (Thais general goods) — `Spellbook.teach` removed; he
+  remains a regular merchant. His own dialog already said
+  `"Magic? Ask a sorcerer or druid about that."`.
+- **Sam** (Thais blacksmith) — same treatment. Greet reverted to
+  *"Welcome to my shop, adventurer |PLAYERNAME|! I {trade} with
+  weapons and armor."*. Old Backpack quest + 2000 steel shields
+  Foolish Quest preserved.
+
+### Addon/outfit dialog purge (37 NPCs)
+
+**Policy**: Realera's character creation lets you pick any outfit
+and any addon directly. So every Tibia 8.6+ NPC chain that gave
+players outfits/addons is dead code in this server. We removed only
+the addon-related branches; everything else (other quests, shop
+trade, chat, voice) is preserved.
+
+**Removal patterns applied**:
+- `addOutfit(N)` / `addOutfitAddon(N, X)` calls — removed.
+- Storage variables tied to addon progression
+  (`Storage.OutfitQuest.*`, `foriental`, `fmage`, etc.) — removed.
+- Helper functions named `*First`, `*Second`, `OrientalFirst`,
+  `BeggarFirst`, etc. — removed.
+- Keywords `addon`, `outfit`, and addon-specific item names
+  (`shoulder spike`, `scimitar`, `hooded cloak`, `dress`, `staff`,
+  `hat`, etc.) — removed.
+- `creatureSayCallback` blocks that only handled addon flow —
+  removed; `setCallback(CALLBACK_MESSAGE_DEFAULT, …)` registration
+  removed when callback was empty.
+- Multi-quest NPCs (Avar Tar, Lugri, The Queen of the Banshees,
+  etc.): only the addon branch was excised; the other branches
+  (cookie quest, KitNo task, seventh seal quest, etc.) stay.
+
+**Effect classes** (so you know what to expect from each NPC):
+
+| Class | Result | NPCs |
+|---|---|---|
+| Pure addon NPC | Reduced to greet-only stub | Atrad, Myra, Ajax, Bron, Erayo, Morgan |
+| Addon + spell teacher | spellbook preserved, addon stripped | Razan, Trisha, Elane, Gregor, Hjaern, Ustan |
+| Addon + shop/quest hub | shop & non-addon dialog preserved | Habdel, Cornelia, Lubo, Hanna, Norma, Sandra, Tom, Sam, King Tibianus, Queen Eloise, Emperor Kruzak, Bozo, Amber |
+| Mixed quest NPC | only addon branch removed | Ariella, Avar Tar, Hjaern, Lugri, The Queen of the Banshees, Simon the Beggar, Irmana, Miraia, Lynda, Chondur |
+| One-line keyword strip | only `outfit` keyword removed | Gelagos, Vescu (kept troll flavor) |
+
+**Full list of 37 NPCs touched**: Atrad, Habdel, Myra, Razan, Trisha,
+Ajax, Amber, Ariella, Avar Tar, Bozo, Bron, Chondur, Cornelia, Elane,
+Emperor Kruzak, Erayo, Gregor, Hanna, Hjaern, Irmana, King Tibianus,
+Lubo, Lugri, Lynda, Miraia, Morgan, Norma, Queen Eloise, Sam, Sandra,
+Simon the Beggar, The Queen Of The Banshees, Tom, Ustan, Zoltan,
+Gelagos, Vescu.
+
+**To revert addon stripping for any single NPC**:
+```
+git checkout <commit-before-this-session> -- data/npc/scripts/<Name>.lua
+```
+Each NPC was a separate edit so reverting one doesn't affect others.
+
+### Cassino moved to deadfiles
+
+`Cassino.xml` and `cassino.lua` moved to `data/npc/deadfiles/` and
+`data/npc/deadfiles/scripts/` respectively. He was a gambling/casino
+NPC; only spawn reference was already in `bkp/global-spawn_bkp.xml`
+(historical backup), nothing in the live spawn. Revert: just `git mv`
+both files back to the original locations.
+
+### NPC compat shim — `npchandler:say` nil-focus tolerance
+
+(Kept from previous Realera session, mentioned here for context: many
+spell teacher NPCs and addon NPCs called `npcHandler:say('text')`
+without passing a focus. Lua 5.5 raises 'table index is nil' on the
+resulting `self.eventSay[nil]`. The lib falls back to the most recent
+focus, then to ambient `selfSay`. See `data/npc/lib/npcsystem/`.)
+
+### Helper scripts produced this session
+
+- `move_unused_npcs.py` — sweeps NPC XMLs in `data/npc/` whose name
+  doesn't appear in `data/world/global-spawn.xml`; moves them and
+  their matching script into `data/npc/deadfiles/`. Untracked
+  before — committing now. Re-runnable.
+- `sync_and_clean_npcs.py` — earlier 3-phase NPC cleanup helper.
+  Reference / re-runnable.
+
+Both scripts are idempotent — they can be re-run safely after future
+spawn changes.
+
+### Day-15 file index
+
+```
+data/npc/lib/spellbook.lua                NEW — shared catalog + Spellbook.teach
+data/npc/lib/npc.lua                      MODIFIED — dofile spellbook.lua
+data/spells/spells.xml                    MODIFIED — needlearn=1 across all instants
+data/npc/scripts/<29 spell teachers>.lua  MODIFIED — explicit greet + Spellbook.teach
+data/npc/scripts/<37 addon-strip NPCs>.lua MODIFIED — addon dialog removed
+data/npc/scripts/Gorn.lua                 REVERTED — Spellbook.teach removed
+data/npc/scripts/Sam.lua                  REVERTED — Spellbook.teach removed (kept blacksmith)
+data/npc/Cassino.xml                      MOVED → deadfiles/
+data/npc/scripts/cassino.lua              MOVED → deadfiles/scripts/
+data/npc/deadfiles/                       NEW DIR (1000+ NPCs) — accumulated from earlier
+                                          unused-NPC sweeps; committing now.
+data/world/bkp/                           NEW DIR — backups of original world.otbm/spawns
+move_unused_npcs.py                       NEW — unused-NPC sweep helper
+sync_and_clean_npcs.py                    NEW — 3-phase NPC cleanup helper
+```
+
+### Things still NOT done (carry forward)
+
+1. **Premium gating audit** — Server policy: every NPC of a vocation
+   teaches the FULL spell list. There are no premium-only spells;
+   free and premium accounts buy from the same NPCs at the same
+   prices. (Premium only gates city access via captains —
+   `data/lib/miscellaneous/free_cities.lua`.) `Spellbook.teach`
+   passes `premium = false` always. If we ever want premium-locked
+   spells, change the per-spell call site.
+2. **Niccolai / Thais knight teacher** — section 12's open thread
+   suggested creating a Thais knight teacher; not done. Gregor in
+   Ab'Dendriel + Sam in Thais (now reverted to non-teacher) means
+   Thais has no knight teacher locally. Not blocking — Gregor is one
+   boat ride away.
+3. **Test pass on the 28 spell teachers** — User flagged that they
+   should sit down and verify each NPC actually responds to "hi" /
+   "spells" / spell name / "yes". Sample success: Lea answers all 4
+   correctly after this session's fixes.
